@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "cgan_ui"
+version = "0.1.0"
+description = "cGAN ineteractive user interface"
+authors = ["Jason Kinyua <jaysnmury@gmail.com>"]
+license = "CC BY"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+mercury = "^2.3.7"
+numpy = "^1.26.4"
+pandas = "^2.2.1"
+Cartopy = "^0.22.0"
+matplotlib = "^3.8.3"
+cfgrib = "^0.9.10.4"
+xarray = {extras = ["io", "viz"], version = "^2024.2.0"}
+eccodes = "^1.7.0"
+ecmwf-opendata = "^0.3.3"
+loguru = "^0.7.2"
+uritemplate = "^4.1.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

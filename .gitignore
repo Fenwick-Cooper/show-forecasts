@@ -1,0 +1,7 @@
+*.ipynb
+*.pyc
+*.log
+data
+__pycache__
+*.sqlite
+celery*
