@@ -14,7 +14,8 @@ RUN apt-get update -y && \
 # service runtime filesystem directories
 RUN mkdir -p ${WORK_HOME} ${APP_DIR} ${APP_STORE_DIR}
 
-COPY poetry.lock pyproject.toml README.md ${APP_DIR}/
+COPY poetry.lock pyproject.toml README.md welcome.md ${APP_DIR}/
+
 COPY ./webapps ${APP_DIR}/webapps
 COPY ./notebooks ${APP_DIR}/notebooks
 COPY ./cgan_ui ${APP_DIR}/cgan_ui
