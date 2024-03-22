@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   webapp:
     image: ${WEBAPP_IMAGE_NAME:-icpac/cgan-ui}
@@ -13,5 +11,8 @@ services:
         APP_USER_ID: ${APP_USER_ID:-10010}
         APP_GROUP_ID: ${APP_GROUP_ID:-10010}
     restart: ${RESTART_POLICY:-always}
+    command: poetry run mercury run 0.0.0.0:8000
     ports:
-      - "${WEBAPP_HOST_IP:-172.17.0.1}:${WEBAPP_HOST_PORT:-6061}:8000"
+      - "${WEBAPP_HOST_IP:-172.17.0.1}:${WEBAPP_HOST_PORT:-8000}:8000"
+    volumes:
+      - ${HOST_DATA_STORE:-./data/store}:${APP_STORE_DIR:-/code/store}

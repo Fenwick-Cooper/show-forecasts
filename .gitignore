@@ -1,6 +1,7 @@
 *.ipynb
 *.pyc
 *.log
+.env
 data
 __pycache__
 *.sqlite

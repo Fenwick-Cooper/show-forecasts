@@ -2,6 +2,7 @@ from ecmwf.opendata import Client
 from datetime import datetime, timedelta
 from loguru import logger
 from pathlib import Path
+import os
 
 
 def get_possible_forecast_dates(dateback: int | None = 4) -> list[datetime.date]:
@@ -23,7 +24,6 @@ def download_ifs_forecast_data(
     source: str | None = "ecmwf",
     model: str | None = "ifs",
     resolution: str | None = "0p25",
-    data_dir: str | None = "data",
     stream: str | None = "enfo",
     dateback: int | None = 4,
     start_step: int | None = 30,
@@ -33,6 +33,7 @@ def download_ifs_forecast_data(
     dates = get_possible_forecast_dates(dateback)
     steps = get_relevant_forecast_steps(start=start_step, final=final_step)
     client = Client(source=source, model=model, resol=resolution)
+    data_store = os.getenv("APP_STORE_DIR", str(Path("./store")))
     requests = [
         {
             "date": date,
@@ -44,7 +45,7 @@ def download_ifs_forecast_data(
     ]
 
     # create data directory if it doesn't exist
-    data_path = Path(f"{data_dir}/{source}/{stream}")
+    data_path = Path(f"{data_store}/{source}/{stream}")
     if not data_path.exists():
         data_path.mkdir(parents=True)
 

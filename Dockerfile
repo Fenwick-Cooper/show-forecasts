@@ -16,6 +16,7 @@ RUN mkdir -p ${WORK_HOME} ${APP_DIR} ${APP_STORE_DIR}
 
 COPY poetry.lock pyproject.toml README.md ${APP_DIR}/
 COPY ./webapps ${APP_DIR}/webapps
+COPY ./notebooks ${APP_DIR}/notebooks
 COPY ./cgan_ui ${APP_DIR}/cgan_ui
 
 ARG APP_USER_ID=1000
@@ -28,6 +29,11 @@ ENV PATH=${WORK_HOME}/bin:/usr/local/bin:/usr/local/chrome-linux64:/usr/local/ch
 WORKDIR ${APP_HOME}
 
 RUN curl -sSL https://install.python-poetry.org | python3 - && \
-    poetry install --all-extras
+    poetry install --all-extras && \
+    poetry run mercury add webapps/test-cgan-forecasts.ipynb && \
+    poetry run mercury add webapps/load-ifs-opendata.ipynb && \
+    poetry run mercury add notebooks/test_GAN_forecast.ipynb && \
+    poetry run mercury add notebooks/test_load_IFS_openData.ipynb
 
 
+CMD ["bash", "poetry run mercury run 0.0.0.0:8000"]
