@@ -4,16 +4,9 @@ until cd ${APP_DIR}; do
     echo "Waiting for server volume..."
 done
 
-until source ${VENV_DIR}/bin/activate; do
+until . ${VENV_DIR}/bin/activate; do
     echo "activating virtual environment..."
 done
-
-echo "Docker: install application dependencies..."
-REQ=${APP_DIR}/pyproject.toml
-if test -f "$REQ"; then
-    pip install --no-cache -e .
-fi
-
 
 until cd ${WORK_HOME}/mercury &&
     python manage.py migrate; do

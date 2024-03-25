@@ -4,7 +4,7 @@ services:
     container_name: ${WEBAPP_CNTR_NAME:-cgan-ui}
     build:
       context: .
-      dockerfile: ${WEBAPP_DOCKERFILE:-Dockerfile}
+      dockerfile: ${WEBAPP_DOCKERFILE:-docker/webapp/Dockerfile}
       args:
         APP_DIR: ${APP_DIR:-/code}
         APP_STORE_DIR: ${APP_STORE_DIR:-/code/store}
@@ -12,8 +12,7 @@ services:
         APP_GROUP_ID: ${APP_GROUP_ID:-10010}
         WORK_HOME: ${WORK_HOME:-/opt/cgan}
     restart: ${RESTART_POLICY:-always}
-    # entrypoint: ${APP_DIR:-/code}/entrypoint.sh
-    command: bash ${APP_DIR:-/code}/entrypoint.sh
+    entrypoint: ${APP_DIR:-/code}/entrypoint.sh
     env_file:
       - ${MERCURY_ENV_FILE:-.env}
     depends_on:
@@ -23,15 +22,33 @@ services:
       - ${MERCURY_STATIC:-./data/static}:${WORK_HOME:-/opt/app}/mercury/django_static
       - ${MERCURY_MEDIA:-./data/media}:${WORK_HOME:-/opt/app}/mercury/media
 
+  jupyter:
+    image: ${LAB_IMAGE_NAME:-icpac/cgan-jupyter}
+    container_name: ${LAB_CNTR_NAME:-cgan-jupyter}
+    build:
+      context: .
+      dockerfile: ${WEBAPP_DOCKERFILE:-docker/lab/Dockerfile}
+      args:
+        APP_USER_ID: ${LAB_USER_ID:-10010}
+        APP_GROUP_ID: ${LAB_GROUP_ID:-10010}
+        WORK_HOME: ${WORK_HOME:-/opt/cgan}
+        APP_STORE_DIR: ${LAB_STORE_DIR:-/opt/store}
+    restart: ${RESTART_POLICY:-always}
+    command: jupyter-lab --IdentityProvider.token='' --no-browser
+    env_file:
+      - ${LAB_ENV_FILE:-.env}
+    volumes:
+      - ${CGAN_DATA_STORE:-./data/store}:${APP_STORE_DIR:-/code/store}
+
   nginx:
     build:
       context: .
-      dockerfile: ./nginx/Dockerfile
+      dockerfile: ./docker/nginx/Dockerfile
     image: ${NGINX_IMAGE_NAME:-icpac/mercury-nginx}
     container_name: ${NGINX_CNTR_NAME:-mercury-nginx}
     restart: ${RESTART_POLICY:-always}
     ports:
-      - ${HOST_NET_IP:-172.17.0.1}:${APP_HOST_PORT:-4050}:80
+      - ${WEB_UI_HOST_IP:-172.17.0.1}:${WEB_UI_HOST_PORT:-4050}:80
     volumes:
       - ${MERCURY_STATIC:-./data/static}:/app/mercury/static
       - ${MERCURY_MEDIA:-./data/media}:/app/mercury/media
@@ -46,6 +63,8 @@ services:
     restart: ${RESTART_POLICY:-always}
     volumes:
       - ./data/pgdata:/var/lib/postgresql/data/
+    ports:
+      - ${UI_DB_HOST_IP:-172.17.0.1}:${UI_DB_HOST_PORT:-5420}:5432
     environment:
       - TZ={TZ:-Africa/Nairobi}
       - POSTGRES_DB=${POSTGRES_DB:-cgan_ui_db}
