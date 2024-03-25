@@ -11,3 +11,4 @@ RUN yarn install --frozen-lockfile && yarn build
 # Copy React static files and start nginx
 FROM nginx:stable-alpine
 COPY --from=build /app/frontend/build /usr/share/nginx/html
+COPY ./docker/nginx/default.conf /etc/nginx/conf.d/default.conf
