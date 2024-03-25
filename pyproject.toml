@@ -19,6 +19,7 @@ eccodes = "^1.7.0"
 ecmwf-opendata = "^0.3.3"
 loguru = "^0.7.2"
 uritemplate = "^4.1.1"
+psycopg2 = "^2.9.9"
 
 
 [build-system]

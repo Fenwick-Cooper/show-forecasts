@@ -1,40 +1,40 @@
 FROM python:3.11-slim
 
-ARG WORK_HOME=/opt/app
-ARG APP_DIR=/code
+ARG APP_USER_ID=10001
+ARG APP_GROUP_ID=10001
+ARG WORK_HOME=/opt/mycgan
+ARG APP_DIR=/opt/app
+ARG VENV_DIR=/opt/venv
 ARG APP_STORE_DIR=${APP_DIR}/store
 
 # install system libraries
 RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends ca-certificates curl wget pkg-config libgdal-dev \
-    libgeos-dev libproj-dev gdal-bin libcgal-dev libxml2-dev libsqlite3-dev gcc g++ texlive  \
-    openssl dvipng texlive-latex-extra texlive-fonts-recommended cm-super libfreetype-dev \
-    libfontconfig-dev libjpeg-dev libspng-dev libx11-dev libgbm-dev
+    apt-get install -y --no-install-recommends git ca-certificates curl wget pkg-config \
+    libgdal-dev libgeos-dev libproj-dev gdal-bin libcgal-dev libxml2-dev libsqlite3-dev  \
+    gcc g++ texlive openssl dvipng texlive-latex-extra texlive-fonts-recommended cm-super \
+    libfreetype-dev libfontconfig-dev libjpeg-dev libspng-dev libx11-dev libgbm-dev 
 
 # service runtime filesystem directories
-RUN mkdir -p ${WORK_HOME} ${APP_DIR} ${APP_STORE_DIR}
+RUN mkdir -p ${WORK_HOME} ${APP_DIR} ${APP_STORE_DIR} ${VENV_DIR} && \
+    git clone --depth 1 https://github.com/mljar/mercury.git /tmp/src-code && \
+    cp -rf /tmp/src-code/mercury ${WORK_HOME} && rm -rf /tmp/src-code
 
-COPY poetry.lock pyproject.toml README.md welcome.md ${APP_DIR}/
+RUN groupadd --gid ${APP_GROUP_ID} mycgan && \ 
+    useradd --home-dir ${WORK_HOME} --uid ${APP_USER_ID} --gid ${APP_GROUP_ID} mycgan && \
+    chown -Rf mycgan:mycgan ${WORK_HOME} ${APP_DIR} ${APP_STORE_DIR} ${VENV_DIR}
 
-COPY ./webapps ${APP_DIR}/webapps
-COPY ./notebooks ${APP_DIR}/notebooks
-COPY ./cgan_ui ${APP_DIR}/cgan_ui
+USER mycgan
+WORKDIR ${APP_DIR}
 
-ARG APP_USER_ID=1000
-ARG APP_GROUP_ID
+RUN python -m venv ${VENV_DIR}
 
-ENV PATH=${WORK_HOME}/bin:/usr/local/bin:/usr/local/chrome-linux64:/usr/local/chromedriver-linux64:$PATH \
-    POETRY_HOME=${WORK_HOME} USER_ID=${APP_USER_ID} GROUP_ID=${APP_GROUP_ID} APP_HOME=${APP_DIR} \
-    APP_STORE_DIR=${APP_STORE_DIR}
+COPY --chown=mycgan:root --chmod=0754 poetry.lock pyproject.toml README.md welcome.md ${APP_DIR}/
 
-WORKDIR ${APP_HOME}
+COPY --chown=mycgan:root --chmod=0754 ./webapps ${APP_DIR}/webapps
+COPY --chown=mycgan:root --chmod=0754 ./notebooks ${APP_DIR}/notebooks
+COPY --chown=mycgan:root --chmod=0754 ./cgan_ui ${APP_DIR}/cgan_ui
+COPY --chmod=0754 --chown=mycgan:root entrypoint.sh ${APP_DIR}/
 
-RUN curl -sSL https://install.python-poetry.org | python3 - && \
-    poetry install --all-extras && \
-    poetry run mercury add webapps/test-cgan-forecasts.ipynb && \
-    poetry run mercury add webapps/load-ifs-opendata.ipynb && \
-    poetry run mercury add notebooks/test_GAN_forecast.ipynb && \
-    poetry run mercury add notebooks/test_load_IFS_openData.ipynb
-
-
-CMD ["bash", "poetry run mercury run 0.0.0.0:8000"]
+ENV PATH=${WORK_HOME}/bin:${VENV_DIR}/bin:$PATH \
+    WORK_HOME=${WORK_HOME} APP_DIR=${APP_DIR} \
+    APP_STORE_DIR=${APP_STORE_DIR} VENV_DIR=${VENV_DIR}

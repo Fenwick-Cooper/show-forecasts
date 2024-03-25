@@ -34,6 +34,7 @@ def download_ifs_forecast_data(
     steps = get_relevant_forecast_steps(start=start_step, final=final_step)
     client = Client(source=source, model=model, resol=resolution)
     data_store = os.getenv("APP_STORE_DIR", str(Path("./store")))
+    Path(data_store).mkdir(parents=True, exist_ok=True)
     requests = [
         {
             "date": date,
