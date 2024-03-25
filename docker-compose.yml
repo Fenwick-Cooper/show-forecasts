@@ -21,7 +21,7 @@ services:
       - ${CGAN_DATA_STORE:-./data/store}:${APP_STORE_DIR:-/code/store}
       - ${MERCURY_STATIC:-./data/static}:${WORK_HOME:-/opt/app}/mercury/django_static
       - ${MERCURY_MEDIA:-./data/media}:${WORK_HOME:-/opt/app}/mercury/media
-      - ./webapp:${APP_DIR}/webapps
+      - ./webapps:${APP_DIR}/webapps
       - ./notebooks:${APP_DIR}/notebooks
 
   jupyter:
@@ -39,7 +39,7 @@ services:
     command: jupyter-lab --IdentityProvider.token '' --ServerApp.base_url '/model/' --port 8000 --ip 0.0.0.0 --no-browser
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${LAB_STORE_DIR:-/code/store}
-      - ./webapp:${WORK_HOME}/webapps
+      - ./webapps:${WORK_HOME}/webapps
       - ./notebooks:${WORK_HOME}/notebooks
 
   nginx:
