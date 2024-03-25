@@ -34,7 +34,7 @@ services:
         WORK_HOME: ${WORK_HOME:-/opt/cgan}
         APP_STORE_DIR: ${LAB_STORE_DIR:-/opt/store}
     restart: ${RESTART_POLICY:-always}
-    command: jupyter-lab --IdentityProvider.token='' --no-browser
+    command: jupyter-lab --IdentityProvider.token '' --port 8000 --ip 0.0.0.0 --no-browser
     env_file:
       - ${LAB_ENV_FILE:-.env}
     volumes:
