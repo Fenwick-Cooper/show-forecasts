@@ -21,6 +21,8 @@ services:
       - ${CGAN_DATA_STORE:-./data/store}:${APP_STORE_DIR:-/code/store}
       - ${MERCURY_STATIC:-./data/static}:${WORK_HOME:-/opt/app}/mercury/django_static
       - ${MERCURY_MEDIA:-./data/media}:${WORK_HOME:-/opt/app}/mercury/media
+      - ./webapp:${APP_DIR}/webapps
+      - ./notebooks:${APP_DIR}/notebooks
 
   jupyter:
     image: ${LAB_IMAGE_NAME:-icpac/cgan-jupyter}
@@ -32,13 +34,13 @@ services:
         APP_USER_ID: ${LAB_USER_ID:-10010}
         APP_GROUP_ID: ${LAB_GROUP_ID:-10010}
         WORK_HOME: ${WORK_HOME:-/opt/cgan}
-        APP_STORE_DIR: ${LAB_STORE_DIR:-/opt/store}
+        LAB_STORE_DIR: ${LAB_STORE_DIR:-/opt/store}
     restart: ${RESTART_POLICY:-always}
-    command: jupyter-lab --IdentityProvider.token '' --port 8000 --ip 0.0.0.0 --no-browser
-    env_file:
-      - ${LAB_ENV_FILE:-.env}
+    command: jupyter-lab --IdentityProvider.token '' --ServerApp.base_url '/model/' --port 8000 --ip 0.0.0.0 --no-browser
     volumes:
-      - ${CGAN_DATA_STORE:-./data/store}:${APP_STORE_DIR:-/code/store}
+      - ${CGAN_DATA_STORE:-./data/store}:${LAB_STORE_DIR:-/code/store}
+      - ./webapp:${WORK_HOME}/webapps
+      - ./notebooks:${WORK_HOME}/notebooks
 
   nginx:
     build:
