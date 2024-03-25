@@ -62,7 +62,7 @@ services:
     container_name: ${UI_DB_CNTR_NAME:-ui-pgdb}
     restart: ${RESTART_POLICY:-always}
     volumes:
-      - ./data/pgdata:/var/lib/postgresql/data/
+      - ${UI_DB_DATA:-./data/pgdata}:/var/lib/postgresql/data/
     ports:
       - ${UI_DB_HOST_IP:-172.17.0.1}:${UI_DB_HOST_PORT:-5420}:5432
     environment:
