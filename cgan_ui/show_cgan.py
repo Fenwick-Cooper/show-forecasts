@@ -5,7 +5,8 @@
 #   Sort out the issues with valid time in the data.
 #   Store the model name in the data.
 #   Combine with the show_forecasts.py script used for plotting IFS open data.
-
+import os
+from pathlib import Path
 import numpy as np
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
@@ -13,6 +14,27 @@ import matplotlib.pyplot as plt
 from matplotlib import colors  # For consistency with Harris et. al 2022
 from datetime import datetime, timedelta
 import xarray as xr
+
+
+def get_forecasts_data_dir() -> str:
+    # Where the forecasts are downloaded to
+    data_store = os.getenv("DATA_STORE_DIR", str(Path("./store").absolute()))
+    return f"{data_store}/gbmc/Operational"
+
+
+def get_forecast_data_dates() -> list[str]:
+    data_dir = get_forecasts_data_dir()
+
+    # The date that the forecast was initialised
+    data_dates = sorted(
+        set(
+            [
+                str(dfile).split("/")[-1].split("_")[1]
+                for dfile in list(Path(data_dir).iterdir())
+            ]
+        )
+    )
+    return [datetime.strptime(dt, "%Y%m%d").strftime("%b %d, %Y") for dt in data_dates]
 
 
 # Convert numpy.datetime64 to datetime

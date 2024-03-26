@@ -6,23 +6,23 @@ services:
       context: .
       dockerfile: ${WEBAPP_DOCKERFILE:-docker/webapp/Dockerfile}
       args:
-        APP_DIR: ${APP_DIR:-/code}
-        APP_STORE_DIR: ${APP_STORE_DIR:-/code/store}
         APP_USER_ID: ${APP_USER_ID:-10010}
         APP_GROUP_ID: ${APP_GROUP_ID:-10010}
         WORK_HOME: ${WORK_HOME:-/opt/cgan}
+        APP_DIR: ${APP_DIR:-/opt/app}
+        DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
     restart: ${RESTART_POLICY:-always}
-    entrypoint: ${APP_DIR:-/code}/entrypoint.sh
+    entrypoint: ${APP_DIR:-/opt/app}/entrypoint.sh
     env_file:
       - ${MERCURY_ENV_FILE:-.env}
     depends_on:
       - uidb
     volumes:
-      - ${CGAN_DATA_STORE:-./data/store}:${APP_STORE_DIR:-/code/store}
-      - ${MERCURY_STATIC:-./data/static}:${WORK_HOME:-/opt/app}/mercury/django_static
-      - ${MERCURY_MEDIA:-./data/media}:${WORK_HOME:-/opt/app}/mercury/media
-      - ./webapps:${APP_DIR}/webapps
-      - ./notebooks:${APP_DIR}/notebooks
+      - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
+      - ${MERCURY_STATIC:-./data/static}:${WORK_HOME:-/opt/cgan}/mercury/django_static
+      - ${MERCURY_MEDIA:-./data/media}:${WORK_HOME:-/opt/cgan}/mercury/media
+      - ./webapps:${APP_DIR:-/opt/app}/webapps
+      - ./notebooks:${APP_DIR:-/opt/app}/notebooks
 
   jupyter:
     image: ${LAB_IMAGE_NAME:-icpac/cgan-jupyter}
@@ -34,11 +34,11 @@ services:
         APP_USER_ID: ${LAB_USER_ID:-10010}
         APP_GROUP_ID: ${LAB_GROUP_ID:-10010}
         WORK_HOME: ${WORK_HOME:-/opt/cgan}
-        LAB_STORE_DIR: ${LAB_STORE_DIR:-/opt/store}
+        DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
     restart: ${RESTART_POLICY:-always}
     command: jupyter-lab --IdentityProvider.token '' --ServerApp.base_url '/model/' --port 8000 --ip 0.0.0.0 --no-browser
     volumes:
-      - ${CGAN_DATA_STORE:-./data/store}:${LAB_STORE_DIR:-/code/store}
+      - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
       - ./webapps:${WORK_HOME}/webapps
       - ./notebooks:${WORK_HOME}/notebooks
 

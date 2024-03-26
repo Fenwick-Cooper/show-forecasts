@@ -8,12 +8,13 @@
 #       Requires interpolating in the vertical to the correct surface pressure
 #    Plot ensemble members
 #    Runoff colour scale is not the best
-
+import os
+from pathlib import Path
 import numpy as np
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-from datetime import timedelta
+from datetime import timedelta, datetime
 import cfgrib
 import xarray as xr
 
@@ -69,6 +70,31 @@ var_info = {
 # Lead times are 30, 33, 36, 39, 42, 45, 48, 51, 54 hours.
 start_hour = 30
 end_hour = 54
+
+
+def get_forecasts_data_dir() -> str:
+    # Where the forecasts are downloaded to
+    data_store = os.getenv("DATA_STORE_DIR", str(Path("./store").absolute()))
+    return f"{data_store}/ecmwf/enfo"
+
+
+def get_forecast_data_dates() -> list[str]:
+    data_dir = get_forecasts_data_dir()
+
+    # The date that the forecast was initialised
+    data_dates = sorted(
+        sorted(
+            set(
+                [
+                    str(dfile).split("/")[-1].split("-")[0]
+                    for dfile in list(Path(data_dir).iterdir())
+                ]
+            )
+        )
+    )
+    return [
+        datetime.strptime(dt, "%Y%m%d%H%M%S").strftime("%b %d, %Y") for dt in data_dates
+    ]
 
 
 # Are all dimensions present in a data set
