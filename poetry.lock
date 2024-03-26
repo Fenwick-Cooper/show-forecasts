@@ -3313,6 +3313,17 @@ botocore = ">=1.12.36,<2.0a.0"
 crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
 
 [[package]]
+name = "schedule"
+version = "1.2.1"
+description = "Job scheduling for humans."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "schedule-1.2.1-py2.py3-none-any.whl", hash = "sha256:14cdeb083a596aa1de6dc77639a1b2ac8bf6eaafa82b1c9279d3612823063d01"},
+    {file = "schedule-1.2.1.tar.gz", hash = "sha256:843bc0538b99c93f02b8b50e3e39886c06f2d003b24f48e1aa4cadfa3f341279"},
+]
+
+[[package]]
 name = "scipy"
 version = "1.12.0"
 description = "Fundamental algorithms for scientific computing in Python"
@@ -4124,4 +4135,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10, <3.20"
-content-hash = "af696dc47a0cb2ade8b601a516df1ad01049426c40c5c6706c1f81f8d76000a4"
+content-hash = "d1e01f33c4f02c2300ee587e0f26192438839f2b48ae74c52c47ec9e619c3fc5"

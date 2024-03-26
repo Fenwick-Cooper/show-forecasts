@@ -35,14 +35,14 @@ var_info = {
         "offset": 0,
         "accumulated": False,
     },
-    "t2m": {
+    "2t": {
         "name": "Two metre temperature",
         "units": "deg. C",
         "normalisation": 1,
         "offset": -273.15,  # Convert from Kelvin to deg. C
         "accumulated": False,
     },
-    "wind": {
+    "ws": {
         "name": "Wind speed",
         "units": "m/s",
         "normalisation": 1,

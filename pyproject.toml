@@ -20,6 +20,7 @@ ecmwf-opendata = "^0.3.3"
 loguru = "^0.7.2"
 uritemplate = "^4.1.1"
 psycopg2 = "^2.9.9"
+schedule = "^1.2.1"
 
 
 [build-system]
