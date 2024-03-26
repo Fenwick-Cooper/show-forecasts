@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
-ARG APP_USER_ID=10001
-ARG APP_GROUP_ID=10001
+ARG APP_USER_ID=10010
+ARG APP_GROUP_ID=10010
 ARG WORK_HOME=/opt/mycgan
 ARG APP_DIR=/opt/app
 ARG VENV_DIR=/opt/venv
@@ -12,7 +12,7 @@ RUN apt-get update -y && \
     apt-get install -y --no-install-recommends git ca-certificates curl wget pkg-config \
     libgdal-dev libgeos-dev libproj-dev gdal-bin libcgal-dev libxml2-dev libsqlite3-dev  \
     gcc g++ texlive openssl dvipng texlive-latex-extra texlive-fonts-recommended cm-super \
-    libfreetype-dev libfontconfig-dev libjpeg-dev libspng-dev libx11-dev libgbm-dev eccodes
+    libfreetype-dev libfontconfig-dev libjpeg-dev libspng-dev libx11-dev libgbm-dev libeccodes-dev libeccodes-tools
 
 # service runtime filesystem directories
 RUN mkdir -p ${WORK_HOME} ${APP_DIR} ${DATA_STORE_DIR} ${VENV_DIR} && \
