@@ -78,42 +78,49 @@ def download_ifs_forecast_data(
 
     # create data download client
     client = Client(source=source, model=model, resol=resolution)
-    req_params = {
-        "stream": stream,
-        "param": list(var_info.keys()),
-    }
     # get latest available forecast date
-    latest_fdate = client.latest(**req_params)
+    latest_fdate = client.latest()
 
     for data_date in data_dates:
-        if forecast_files_exist(data_date=data_date) and not force_download:
-            logger.info(
-                f"data download job not executed because data files for {data_date} exist. Pass force_download=True to re-download the files"
-            )
-        elif latest_fdate.date() >= data_date:
+        if latest_fdate.date() >= data_date:
             requests = [
-                {"date": data_date, "step": step, **req_params} for step in steps
+                {
+                    "date": data_date,
+                    "step": step,
+                    "param": list(var_info.keys()),
+                    "stream": stream,
+                }
+                for step in steps
             ]
             for request in requests:
                 target_file = f"{data_path}/{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
-                get_url = client._get_urls(
-                    request=request, target=target_file, use_index=False
-                )
-                logger.info(
-                    f"trying {model} data download with payload {request} on URL {get_url.urls[0]}"
-                )
-                for i in range(re_try_times):
-                    result = try_data_download(
-                        client=client,
-                        request=request,
-                        target_file=target_file,
-                        model=model,
+                if (
+                    not Path(target_file).exists()
+                    or Path(target_file).stat().st_size / (1024 * 1024) < 80
+                    or force_download
+                ):
+                    get_url = client._get_urls(
+                        request=request, target=target_file, use_index=False
                     )
-                    if result is not None:
-                        logger.info(
-                            f"downloaded {model} forecast data for {result.datetime} successfully"
+                    logger.info(
+                        f"trying {model} data download with payload {request} on URL {get_url.urls[0]}"
+                    )
+                    for i in range(re_try_times):
+                        result = try_data_download(
+                            client=client,
+                            request=request,
+                            target_file=target_file,
+                            model=model,
                         )
-                        break
+                        if result is not None:
+                            logger.info(
+                                f"downloaded {model} forecast data for {request['step']}h {result.datetime} successfully"
+                            )
+                            break
+                else:
+                    logger.warning(
+                        f"data download job for {request['step']}h {data_date} not executed because the file exist. Pass force_download=True to re-download the files"
+                    )
         else:
             logger.warning(
                 f"IFS forecast data for {data_date} is not available. Please try again later!"
