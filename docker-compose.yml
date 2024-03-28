@@ -26,7 +26,7 @@ services:
 
   download:
     image: ${WEBAPP_IMAGE_NAME:-icpac/cgan-ui}
-    container_name: ${WEBAPP_CNTR_NAME:-ecmwf-opendata}
+    container_name: ${WEBAPP_CNTR_NAME:-data-download}
     build:
       context: .
       dockerfile: ${WEBAPP_DOCKERFILE:-docker/webapp/Dockerfile}
