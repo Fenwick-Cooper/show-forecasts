@@ -1,12 +1,54 @@
-import os
+import cfgrib
+import xarray as xr
 from pathlib import Path
 from typing import Dict
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
+from dask.diagnostics import ProgressBar
 from ecmwf.opendata import Client
 from ecmwf.opendata.client import Result
 from loguru import logger
-from cgan_ui.show_forecasts import var_info, get_forecast_data_dates
+from cgan_ui.utils import get_data_store_path, get_forecast_data_files
+from cgan_ui.show_forecasts import get_forecast_data_dates
+
+
+def get_datasets_mask_bbox() -> Dict[str, list]:
+    return {
+        "EA": [21, -11.75, 51, 24],
+        "KEN": [33.6, -5.84, 43.6, 6.22],
+        "ETH": [31.58, 3.12, 47.65, 16.5],
+    }
+
+
+def standardize_dataset(da: xr.DataArray):
+    if "x" in da.dims and "y" in da.dims:
+        da = da.rename({"x": "lon", "y": "lat"})
+    if "longitude" in da.dims and "latitude" in da.dims:
+        da = da.rename({"longitude": "lon", "latitude": "lat"})
+    return da
+
+
+def slice_dataset_by_bbox(ds: xr.Dataset, bbox: list[float]):
+    ds = ds.sel(lon=slice(bbox[0], bbox[2]))
+    if ds.lat.values[0] < ds.lat.values[-1]:
+        ds = ds.sel(lat=slice(bbox[1], bbox[3]))
+    else:
+        ds = ds.sel(lat=slice(bbox[3], bbox[1]))
+    return ds
+
+
+def read_dataset(file_path: str) -> list[xr.DataArray]:
+    try:
+        ds = cfgrib.open_datasets(file_path)
+    except Exception as err:
+        logger.error(f"failed to read {file_path} dataset file with error {err}")
+        return None
+    if type(ds) is list:
+        arrays = []
+        for i in range(len(ds)):
+            if "number" in ds[i].dims:
+                arrays.append(standardize_dataset(ds[i]))
+        return xr.combine_by_coords(arrays, compat="override")
 
 
 def get_possible_forecast_dates(
@@ -35,7 +77,7 @@ def try_data_download(
     model: str | None = "ifs",
 ) -> Result | None:
     try:
-        result = client.retrieve(
+        result = client.download(
             request=request,
             target=target_file,
         )
@@ -45,12 +87,63 @@ def try_data_download(
         )
         return None
     else:
+        logger.info(f"downloaded {result.urls[0]} successfully")
         return result
 
 
 def forecast_files_exist(data_date: datetime.date) -> bool:
     data_dates = get_forecast_data_dates()
     return data_date.strftime("%b %d, %Y") in data_dates
+
+
+def post_process_ecmwf_grib2_dataset(
+    grib2_file_name: str, source: str | None = "ecmwf", stream: str | None = "enfo"
+) -> None:
+    logger.info(f"executing post-processing task for {grib2_file_name}")
+    store_path = get_data_store_path()
+    ds = read_dataset(f"{store_path}/{source}/{stream}/{grib2_file_name}")
+    if ds is not None:
+        # save entire raw data file to disk in zarr format
+        zarr_file = grib2_file_name.replace("grib2", "zarr")
+        write_job = ds.chunk().to_zarr(
+            f"{store_path}/raw/{source}/{stream}/{zarr_file}", mode="w", compute=False
+        )
+        with ProgressBar():
+            logger.info(f"writing {grib2_file_name} dataset to {zarr_file}")
+            write_job.compute()
+        # release memory space occupied by write_job
+        write_job = None
+        # process area specific masks
+        mask_bbox = get_datasets_mask_bbox()
+        for key in mask_bbox.keys():
+            logger.info(f"processing {grib2_file_name} mask for {key}")
+            sliced = slice_dataset_by_bbox(ds, mask_bbox[key])
+            out_dir = store_path / "interim" / key / source / stream
+            if not out_dir.exists():
+                out_dir.mkdir(parents=True)
+            sliced.to_netcdf(out_dir / grib2_file_name.replace("grib2", "nc"))
+            logger.info(f"saved {grib2_file_name} mask for {key} successfully")
+        # remove grib2 file from disk
+        grib2_path: Path = store_path / source / stream / grib2_file_name
+        logger.info(f"deleting {grib2_file_name} from disk")
+        try:
+            grib2_path.unlink(missing_ok=False)
+        except Exception as err:
+            logger.error(f"failed to delete {grib2_file_name} with error {err}")
+        # remove associated idx file
+        idx_path: Path = store_path / source / stream / f"{grib2_file_name}.923a8.idx"
+        idx_path.unlink(missing_ok=True)
+
+
+def post_process_downloaded_ecmwf_forecasts(
+    source: str | None = "ecmwf", stream: str | None = "enfo"
+) -> None:
+    grib2_files = get_forecast_data_files(source=source, stream=stream)
+    logger.info(f"starting batch post-processing tasks for {grib2_files.join(', ')}")
+    for grib2_file in grib2_files:
+        post_process_ecmwf_grib2_dataset(
+            source=source, stream=stream, grib2_file_name=grib2_file
+        )
 
 
 def download_ifs_forecast_data(
@@ -62,7 +155,7 @@ def download_ifs_forecast_data(
     dateback: int | None = 4,
     start_step: int | None = 30,
     final_step: int | None = 54,
-    re_try_times: int | None = 5,
+    re_try_times: int | None = 10,
     force_download: bool | None = False,
 ) -> None:
     # generate down download parameters
@@ -70,9 +163,9 @@ def download_ifs_forecast_data(
     steps = get_relevant_forecast_steps(start=start_step, final=final_step)
 
     # construct data store path
-    data_store = os.getenv("DATA_STORE_DIR", str(Path("./store")))
+    data_path = get_data_store_path() / source / stream
+
     # create data directory if it doesn't exist
-    data_path = Path(f"{data_store}/{source}/{stream}")
     if not data_path.exists():
         data_path.mkdir(parents=True, exist_ok=True)
 
@@ -87,13 +180,13 @@ def download_ifs_forecast_data(
                 {
                     "date": data_date,
                     "step": step,
-                    "param": list(var_info.keys()),
                     "stream": stream,
                 }
                 for step in steps
             ]
             for request in requests:
-                target_file = f"{data_path}/{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
+                file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
+                target_file = f"{str(data_path)}/{file_name}"
                 if (
                     not Path(target_file).exists()
                     or Path(target_file).stat().st_size / (1024 * 1024) < 80
@@ -114,7 +207,10 @@ def download_ifs_forecast_data(
                         )
                         if result is not None:
                             logger.info(
-                                f"downloaded {model} forecast data for {request['step']}h {result.datetime} successfully"
+                                f"dataset for {model} forecast, {request['step']}h step, {result.datetime} successfully downloaded"
+                            )
+                            post_process_ecmwf_grib2_dataset(
+                                source=source, stream=stream, grib2_file_name=file_name
                             )
                             break
                 else:
@@ -129,6 +225,14 @@ def download_ifs_forecast_data(
 
 if __name__ == "__main__":
     parser = ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--command",
+        dest="command",
+        type=str,
+        default="download",
+        help="Command to be executed. Either of download or process.",
+    )
     parser.add_argument(
         "-d",
         "--date",
@@ -162,4 +266,17 @@ if __name__ == "__main__":
         help="Forecast data final time step",
     )
     args = parser.parse_args()
-    download_ifs_forecast_data(**args.__dict__)
+    dict_args = {key: value for key, value in args.__dict__.items() if key != "command"}
+    match (args.command):
+        case "download":
+            logger.info(
+                f"received ecmwf forecast data download task with parameters {dict_args}"
+            )
+            download_ifs_forecast_data(**dict_args)
+        case "process":
+            logger.info(
+                "received ecmwf forecast datasets post-processing task for initial download grib2 files"
+            )
+            post_process_downloaded_ecmwf_forecasts()
+        case _:
+            logger.error(f"handler for {args.command} not implemented!")

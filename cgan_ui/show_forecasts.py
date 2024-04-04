@@ -203,11 +203,11 @@ def load_forecast(key, forecast_init_date, data_dir, status_updates=True):
 
     # Just need the start and end lead times for accumulated variables
     for lead_hour in forecast_hours:
-        if status_updates:
-            print(f"Loading {key} with lead time {lead_hour}h.")
-
         # Name of the file we will read
         file_name = f"{data_dir}/{d.year}{d.month:02}{d.day:02}000000-{lead_hour}h-enfo-ef.grib2"
+
+        if status_updates:
+            print(f"Loading {key} with lead time {lead_hour}h from {file_name}")
 
         # Open a grib2 file for reading
         # xarray.open_dataset(file_name, engine="cfgrib") doesn't work!
