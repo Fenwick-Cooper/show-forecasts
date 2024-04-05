@@ -48,3 +48,10 @@ DATA_PARAMS = {
 # Lead times are 30, 33, 36, 39, 42, 45, 48, 51, 54 hours.
 LEAD_START_HOUR = 30
 LEAD_END_HOUR = 54
+
+# area of interest bounding box
+AOI_BBOX = {
+    "EA": [21, -11.75, 51, 24],
+    "KEN": [33.6, -5.84, 43.6, 6.22],
+    "ETH": [31.58, 3.12, 47.65, 16.5],
+}

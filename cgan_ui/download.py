@@ -8,16 +8,12 @@ from dask.diagnostics import ProgressBar
 from ecmwf.opendata import Client
 from ecmwf.opendata.client import Result
 from loguru import logger
-from cgan_ui.utils import get_data_store_path, get_forecast_data_files
-from cgan_ui.show_forecasts import get_forecast_data_dates
-
-
-def get_datasets_mask_bbox() -> Dict[str, list]:
-    return {
-        "EA": [21, -11.75, 51, 24],
-        "KEN": [33.6, -5.84, 43.6, 6.22],
-        "ETH": [31.58, 3.12, 47.65, 16.5],
-    }
+from cgan_ui.utils import (
+    get_data_store_path,
+    get_forecast_data_files,
+    get_forecast_data_dates,
+)
+from cgan_ui.constants import AOI_BBOX
 
 
 def standardize_dataset(da: xr.DataArray):
@@ -114,25 +110,24 @@ def post_process_ecmwf_grib2_dataset(
         # release memory space occupied by write_job
         write_job = None
         # process area specific masks
-        mask_bbox = get_datasets_mask_bbox()
-        for key in mask_bbox.keys():
+        for key in AOI_BBOX.keys():
             logger.info(f"processing {grib2_file_name} mask for {key}")
-            sliced = slice_dataset_by_bbox(ds, mask_bbox[key])
+            sliced = slice_dataset_by_bbox(ds, AOI_BBOX[key])
             out_dir = store_path / "interim" / key / source / stream
             if not out_dir.exists():
                 out_dir.mkdir(parents=True)
             sliced.to_netcdf(out_dir / grib2_file_name.replace("grib2", "nc"))
             logger.info(f"saved {grib2_file_name} mask for {key} successfully")
         # remove grib2 file from disk
-        grib2_path: Path = store_path / source / stream / grib2_file_name
-        logger.info(f"deleting {grib2_file_name} from disk")
-        try:
-            grib2_path.unlink(missing_ok=False)
-        except Exception as err:
-            logger.error(f"failed to delete {grib2_file_name} with error {err}")
-        # remove associated idx file
-        idx_path: Path = store_path / source / stream / f"{grib2_file_name}.923a8.idx"
-        idx_path.unlink(missing_ok=True)
+        # grib2_path: Path = store_path / source / stream / grib2_file_name
+        # logger.info(f"deleting {grib2_file_name} from disk")
+        # try:
+        #     grib2_path.unlink(missing_ok=False)
+        # except Exception as err:
+        #     logger.error(f"failed to delete {grib2_file_name} with error {err}")
+        # # remove associated idx file
+        # idx_path: Path = store_path / source / stream / f"{grib2_file_name}.923a8.idx"
+        # idx_path.unlink(missing_ok=True)
 
 
 def post_process_downloaded_ecmwf_forecasts(

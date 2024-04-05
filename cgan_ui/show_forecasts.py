@@ -18,7 +18,6 @@ from datetime import timedelta, datetime
 import cfgrib
 import xarray as xr
 from cgan_ui.constants import DATA_PARAMS, LEAD_START_HOUR, LEAD_END_HOUR
-from cgan_ui.utils import get_data_store_path, get_forecast_data_dates
 
 
 # Are all dimensions present in a data set

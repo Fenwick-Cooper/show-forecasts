@@ -14,9 +14,9 @@ def get_forecast_data_files(
     data_dir = (
         store_path / source / stream
         if mask is None
-        else store_path / mask / source / stream
+        else store_path / "interim" / mask / source / stream
     )
-    return list(set([str(dfile).split("/")[-1] for dfile in data_dir.iterdir()]))
+    return [str(dfile).split("/")[-1] for dfile in data_dir.iterdir()]
 
 
 def get_forecast_data_dates(
@@ -24,7 +24,7 @@ def get_forecast_data_dates(
 ) -> list[str]:
     data_files = get_forecast_data_files(source=source, stream=stream, mask=mask)
     # extract forecast initialization dates
-    data_dates = sorted(sorted([dfile.split("-")[0] for dfile in data_files]))
+    data_dates = sorted(sorted(set([dfile.split("-")[0] for dfile in data_files])))
     return [
         datetime.strptime(dt, "%Y%m%d%H%M%S").strftime("%b %d, %Y") for dt in data_dates
     ]
