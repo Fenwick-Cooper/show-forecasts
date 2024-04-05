@@ -56,8 +56,7 @@ services:
     command: jupyter-lab --IdentityProvider.token '' --ServerApp.base_url '/model/' --port 8000 --ip 0.0.0.0 --no-browser
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
-      - ./webapps:${WORK_HOME}/webapps
-      - ./notebooks:${WORK_HOME}/notebooks
+      - ./notebooks:${WORK_HOME}
 
   nginx:
     build:

@@ -17,84 +17,8 @@ import matplotlib.pyplot as plt
 from datetime import timedelta, datetime
 import cfgrib
 import xarray as xr
-
-
-# Required information about each variable we want to look at
-var_info = {
-    "sp": {
-        "name": "Surface pressure",
-        "units": "hPa",
-        "normalisation": 100,  # Convert from Pa to hPa
-        "offset": 0,
-        "accumulated": False,
-    },
-    "msl": {
-        "name": "Pressure at mean sea level",
-        "units": "hPa",
-        "normalisation": 100,  # Convert from Pa to hPa
-        "offset": 0,
-        "accumulated": False,
-    },
-    "t2m": {
-        "name": "Two metre temperature",
-        "units": "deg. C",
-        "normalisation": 1,
-        "offset": -273.15,  # Convert from Kelvin to deg. C
-        "accumulated": False,
-    },
-    "wind": {
-        "name": "Wind speed",
-        "units": "m/s",
-        "normalisation": 1,
-        "offset": 0,
-        "accumulated": False,
-    },
-    "tp": {
-        "name": "Total precipitation",
-        "units": "mm/day",
-        "normalisation": 0.001,  # Convert from m to mm/day
-        "offset": 0,
-        "accumulated": True,
-    },
-    "ro": {
-        "name": "Surface runoff water",
-        "units": "m",
-        "normalisation": 1,
-        "offset": 0,
-        "accumulated": False,
-    },
-}
-
-
-# All forecasts are initialised at 00:00 UTC
-# Lead times are 30, 33, 36, 39, 42, 45, 48, 51, 54 hours.
-start_hour = 30
-end_hour = 54
-
-
-def get_forecasts_data_dir() -> str:
-    # Where the forecasts are downloaded to
-    data_store = os.getenv("DATA_STORE_DIR", str(Path("./store").absolute()))
-    return f"{data_store}/ecmwf/enfo"
-
-
-def get_forecast_data_dates() -> list[str]:
-    data_dir = get_forecasts_data_dir()
-
-    # The date that the forecast was initialised
-    data_dates = sorted(
-        sorted(
-            set(
-                [
-                    str(dfile).split("/")[-1].split("-")[0]
-                    for dfile in list(Path(data_dir).iterdir())
-                ]
-            )
-        )
-    )
-    return [
-        datetime.strptime(dt, "%Y%m%d%H%M%S").strftime("%b %d, %Y") for dt in data_dates
-    ]
+from cgan_ui.constants import DATA_PARAMS, LEAD_START_HOUR, LEAD_END_HOUR
+from cgan_ui.utils import get_data_store_path, get_forecast_data_dates
 
 
 # Are all dimensions present in a data set
@@ -191,15 +115,15 @@ def load_forecast(key, forecast_init_date, data_dir, status_updates=True):
     # Shorthand for clarity
     d = forecast_init_date
 
-    if var_info[key]["accumulated"]:  # Accumulated variables
-        forecast_hours = [start_hour, end_hour]
-        if start_hour == end_hour:
+    if DATA_PARAMS[key]["accumulated"]:  # Accumulated variables
+        forecast_hours = [LEAD_START_HOUR, LEAD_END_HOUR]
+        if LEAD_START_HOUR == LEAD_END_HOUR:
             print(
                 "Error in load_forecast, start_hour == end_hour for accumulated forecast."
             )
 
     else:  # Variables are not accumulated
-        forecast_hours = np.arange(start_hour, end_hour + 1, 3)
+        forecast_hours = np.arange(LEAD_START_HOUR, LEAD_END_HOUR + 1, 3)
 
     # Just need the start and end lead times for accumulated variables
     for lead_hour in forecast_hours:
@@ -229,13 +153,13 @@ def load_forecast(key, forecast_init_date, data_dir, status_updates=True):
             data_3h = da[:, 261:416, 796:938]
 
         # Average over the forecast period
-        if lead_hour == start_hour:
+        if lead_hour == LEAD_START_HOUR:
             data = data_3h / 2  # Divide by two for the trapezium rule
-            if var_info[key]["accumulated"]:
+            if DATA_PARAMS[key]["accumulated"]:
                 data = -data  # Negative because we are taking it away
             data_norm = 0.5
 
-        elif lead_hour == end_hour:
+        elif lead_hour == LEAD_END_HOUR:
             data += data_3h / 2  # Divide by two for the trapezium rule
             data_norm += 0.5
 
@@ -244,11 +168,13 @@ def load_forecast(key, forecast_init_date, data_dir, status_updates=True):
             data_norm += 1
 
     # Normalise the data to get the 24 hour mean with the correct units
-    data = var_info[key]["offset"] + data / (data_norm * var_info[key]["normalisation"])
+    data = DATA_PARAMS[key]["offset"] + data / (
+        data_norm * DATA_PARAMS[key]["normalisation"]
+    )
 
     # Record the name and units
-    data.attrs["name"] = var_info[key]["name"]
-    data.attrs["units"] = var_info[key]["units"]
+    data.attrs["name"] = DATA_PARAMS[key]["name"]
+    data.attrs["units"] = DATA_PARAMS[key]["units"]
 
     return data
 
@@ -321,8 +247,8 @@ def plot_forecast(data):
 # Arguments
 #    forecast_init_date - A datetime.datetime corresponding to when the forecast was initialised.
 def print_forecast_info(forecast_init_date):
-    start_date = forecast_init_date + timedelta(hours=start_hour)
-    end_date = forecast_init_date + timedelta(hours=end_hour)
+    start_date = forecast_init_date + timedelta(hours=LEAD_START_HOUR)
+    end_date = forecast_init_date + timedelta(hours=LEAD_START_HOUR)
     print(f"Forecast average: {start_date} - {end_date}")
     print(f"Forecast initialisation: {forecast_init_date.date()} 00:00:00")
     print()
@@ -335,13 +261,13 @@ def print_forecast_info(forecast_init_date):
 #    A list of the variable names that can be used for plotting.
 def get_possible_variables(print_variables=True):
 
-    keys = list(var_info.keys())
+    keys = list(DATA_PARAMS.keys())
     if print_variables:
         print("Available variables to plot are the following:")
         for i in range(len(keys)):
             print(
-                f"{keys[i]:<5} - {var_info[keys[i]]['name']} ({var_info[keys[i]]['units']})"
+                f"{keys[i]:<5} - {DATA_PARAMS[keys[i]]['name']} ({DATA_PARAMS[keys[i]]['units']})"
             )
         print()
 
-    return list(var_info.keys())
+    return list(DATA_PARAMS.keys())

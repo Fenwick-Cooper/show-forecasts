@@ -209,9 +209,6 @@ def download_ifs_forecast_data(
                             logger.info(
                                 f"dataset for {model} forecast, {request['step']}h step, {result.datetime} successfully downloaded"
                             )
-                            post_process_ecmwf_grib2_dataset(
-                                source=source, stream=stream, grib2_file_name=file_name
-                            )
                             break
                 else:
                     logger.warning(
@@ -221,6 +218,7 @@ def download_ifs_forecast_data(
             logger.warning(
                 f"IFS forecast data for {data_date} is not available. Please try again later!"
             )
+    post_process_downloaded_ecmwf_forecasts()
 
 
 if __name__ == "__main__":

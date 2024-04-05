@@ -20,12 +20,6 @@ for filepath in ${APP_DIR}/webapps/*.ipynb; do
     python manage.py add $filepath
 done
 
-echo "Docker: Add jupyter notebooks"
-for filepath in ${APP_DIR}/notebooks/*.ipynb; do
-    echo "Docker: Add " $filepath
-    python manage.py add $filepath
-done
-
 echo "Docker: Collect statics, for Admin Panel, DRF views"
 python manage.py collectstatic --noinput
 
