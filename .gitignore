@@ -1,9 +1,9 @@
-*.ipynb
 *.pyc
 *.log
 .env
-data
-store
-__pycache__
 *.sqlite
 celery*
+__pycache__
+.ipynb_checkpoints
+data
+store
