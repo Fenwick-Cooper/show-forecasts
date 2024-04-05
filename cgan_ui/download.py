@@ -134,7 +134,7 @@ def post_process_downloaded_ecmwf_forecasts(
     source: str | None = "ecmwf", stream: str | None = "enfo"
 ) -> None:
     grib2_files = get_forecast_data_files(source=source, stream=stream)
-    logger.info(f"starting batch post-processing tasks for {grib2_files.join(', ')}")
+    logger.info(f"starting batch post-processing tasks for {', '.join(grib2_files)}")
     for grib2_file in grib2_files:
         post_process_ecmwf_grib2_dataset(
             source=source, stream=stream, grib2_file_name=grib2_file

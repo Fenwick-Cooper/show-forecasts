@@ -1,5 +1,8 @@
 *.pyc
 *.log
+*.nc
+*.grib2
+*.zarr
 .env
 *.sqlite
 celery*
