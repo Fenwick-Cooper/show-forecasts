@@ -58,7 +58,7 @@ def load_forecast(
                 f"Loading {key} with lead time {lead_hour}h from {file_name.split('/')[-1]}"
             )
 
-        # Open a grib2 file for reading
+        # Open a NetCDF file for reading
         ds = xr.open_dataset(file_name)
 
         # Get the DataArray corresponding to the key. 'number' ensures that we pick the ensemble forecast.
