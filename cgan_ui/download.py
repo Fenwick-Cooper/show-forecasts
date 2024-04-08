@@ -93,12 +93,23 @@ def forecast_files_exist(data_date: datetime.date) -> bool:
 
 
 def post_process_ecmwf_grib2_dataset(
-    grib2_file_name: str, source: str | None = "ecmwf", stream: str | None = "enfo"
+    grib2_file_name: str,
+    source: str | None = "ecmwf",
+    stream: str | None = "enfo",
+    re_try_times: int | None = 5,
 ) -> None:
     logger.info(f"executing post-processing task for {grib2_file_name}")
     store_path = get_data_store_path()
-    ds = read_dataset(f"{store_path}/{source}/{stream}/{grib2_file_name}")
-    if ds is not None:
+    file_path = f"{store_path}/{source}/{stream}/{grib2_file_name}"
+    for _ in range(re_try_times):
+        ds = read_dataset(file_path)
+        if ds is not None:
+            break
+    if ds is None:
+        logger.error(
+            f"failed to read {file_path} after {re_try_times} unsuccessful trials"
+        )
+    else:
         # save entire raw data file to disk in zarr format
         zarr_file = grib2_file_name.replace("grib2", "zarr")
         write_job = ds.chunk().to_zarr(
@@ -133,7 +144,7 @@ def post_process_ecmwf_grib2_dataset(
 def post_process_downloaded_ecmwf_forecasts(
     source: str | None = "ecmwf", stream: str | None = "enfo"
 ) -> None:
-    grib2_files = get_forecast_data_files(source=source, stream=stream)
+    grib2_files = sorted(get_forecast_data_files(source=source, stream=stream))
     logger.info(f"starting batch post-processing tasks for {', '.join(grib2_files)}")
     for grib2_file in grib2_files:
         post_process_ecmwf_grib2_dataset(
@@ -152,6 +163,7 @@ def download_ifs_forecast_data(
     final_step: int | None = 54,
     re_try_times: int | None = 10,
     force_download: bool | None = False,
+    min_grib2_size: float | None = 4.1 * 1024,
 ) -> None:
     # generate down download parameters
     data_dates = get_possible_forecast_dates(data_date=date_str, dateback=dateback)
@@ -184,7 +196,7 @@ def download_ifs_forecast_data(
                 target_file = f"{str(data_path)}/{file_name}"
                 if (
                     not Path(target_file).exists()
-                    or Path(target_file).stat().st_size / (1024 * 1024) < 80
+                    or Path(target_file).stat().st_size / (1024 * 1024) < min_grib2_size
                     or force_download
                 ):
                     get_url = client._get_urls(
@@ -193,7 +205,7 @@ def download_ifs_forecast_data(
                     logger.info(
                         f"trying {model} data download with payload {request} on URL {get_url.urls[0]}"
                     )
-                    for i in range(re_try_times):
+                    for _ in range(re_try_times):
                         result = try_data_download(
                             client=client,
                             request=request,
