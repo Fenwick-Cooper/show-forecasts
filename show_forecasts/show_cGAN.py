@@ -88,3 +88,56 @@ def plot_GAN_forecast(data):
         fig.suptitle(f"Jurre Brishti cGAN forecast: Valid {valid_time} - {valid_time + timedelta(hours=6)}")  # Overall title
         plt.tight_layout()  # Looks nicer
         plt.show()  # Finally draw the plot
+
+
+# Plot all ensemble members in the cGAN forecast data at a specified valid time.
+# Arguments
+#    data                  - An xarray DataSet containing the cGAN rainfall forecasts.
+#    valid_time_start_hour - The hour the valid time starts at. Can either be 6, 12, 18 or 0.
+def plot_GAN_ensemble(data, valid_time_start_hour):
+    
+    # Change valid_time_start_hour into the valid_time_idx
+    if (valid_time_start_hour == 6):
+        valid_time_idx = 0
+    elif (valid_time_start_hour == 12):
+        valid_time_idx = 1
+    elif (valid_time_start_hour == 18):
+        valid_time_idx = 2
+    elif (valid_time_start_hour == 0):
+        valid_time_idx = 3
+    else:
+        print("ERROR: valid_time_start_hour must be 6, 12, 18 or 0.")
+        return
+    
+    # Convert the forecast valid time to a datetime.datetime format
+    valid_time = datetime64_to_datetime(data['fcst_valid_time'][0,valid_time_idx].values)
+
+    # To be consistent with the Harris et. al paper.
+    value_range_precip = (0.1, 15)
+
+    # Define the figure and each axis for the rows and columns
+    fig, axs = plt.subplots(nrows=10, ncols=5, subplot_kw={'projection': ccrs.PlateCarree()},
+                            figsize=(10,25), layout="constrained")
+
+    # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
+    axs=axs.flatten()
+
+    # For each ensemble member
+    for ax_idx in range(data['member'].size):
+
+        ax=axs[ax_idx]  # First plot (left)
+        ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
+        ax.add_feature(cfeature.BORDERS, linewidth=1)
+        ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
+        # Actually make the plot
+        c = ax.pcolormesh(data['longitude'], data['latitude'], data['precipitation'][0,ax_idx,valid_time_idx,:,:],
+                            norm=colors.LogNorm(*value_range_precip), cmap='YlGnBu', transform=ccrs.PlateCarree())
+        ax.set_title(f"{ax_idx+1}",size=14)  # This plot's title
+
+    # Add a final coluorbar
+    cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.4, pad=0.01)  # Add a colorbar with a nice size
+    # cb.set_label(data['precipitation'].attrs['units'])  # Label the colorbar # XXX Change "mm h**-1" to "mm/h"
+    cb.set_label('Rainfall (mm/h)')  # Label the colorbar
+
+    fig.suptitle(f"Jurre Brishti cGAN ensemble: Valid {valid_time} - {valid_time + timedelta(hours=6)}")  # Overall title
+    plt.show()  # Finally draw the plot
