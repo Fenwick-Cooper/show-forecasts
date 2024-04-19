@@ -37,7 +37,7 @@ services:
         APP_DIR: ${APP_DIR:-/opt/app}
         DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
     restart: ${RESTART_POLICY:-always}
-    command: ["python", "cgan_ui/download.py"]
+    command: ["python", "cgan_ui/download.py", "-p", "1"]
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
 

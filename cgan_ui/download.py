@@ -145,7 +145,9 @@ def post_process_downloaded_ecmwf_forecasts(
     source: str | None = "ecmwf", stream: str | None = "enfo"
 ) -> None:
     grib2_files = sorted(get_forecast_data_files(source=source, stream=stream))
-    logger.info(f"starting batch post-processing tasks for {'\n'.join(grib2_files)}")
+    logger.info(
+        f"starting batch post-processing tasks for {'  <---->  '.join(grib2_files)}"
+    )
     for grib2_file in grib2_files:
         post_process_ecmwf_grib2_dataset(
             source=source, stream=stream, grib2_file_name=grib2_file
@@ -191,6 +193,7 @@ def download_ifs_forecast_data(
                 }
                 for step in steps
             ]
+            grib2_files = []
             for request in requests:
                 file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
                 target_file = f"{str(data_path)}/{file_name}"
@@ -221,11 +224,15 @@ def download_ifs_forecast_data(
                     logger.warning(
                         f"data download job for {request['step']}h {data_date} not executed because the file exist. Pass force_download=True to re-download the files"
                     )
+                grib2_files.append(file_name)
+            for grib2_file in grib2_files:
+                post_process_ecmwf_grib2_dataset(
+                    source=source, stream=stream, grib2_file_name=grib2_file
+                )
         else:
             logger.warning(
                 f"IFS forecast data for {data_date} is not available. Please try again later!"
             )
-    post_process_downloaded_ecmwf_forecasts()
 
 
 if __name__ == "__main__":
