@@ -10,7 +10,7 @@ ARG DATA_STORE_DIR=/opt/store
 
 # install system libraries
 RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends git rsync ca-certificates pkg-config \
+    apt-get install -y --no-install-recommends git rsync ssh ca-certificates pkg-config \
     libgdal-dev libgeos-dev libproj-dev gdal-bin libcgal-dev libxml2-dev libsqlite3-dev  \
     gcc g++ dvipng libfontconfig-dev libjpeg-dev libspng-dev libx11-dev libgbm-dev \
     libeccodes-dev libeccodes-tools
