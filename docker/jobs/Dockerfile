@@ -36,3 +36,4 @@ RUN python -m venv ${VENV_DIR} && \
     . ${VENV_DIR}/bin/activate && \
     cd ${WORK_HOME} && pip install --no-cache -e . && \
     cd ${APP_DIR} && pip install --no-cache -e .
+

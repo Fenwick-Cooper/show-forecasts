@@ -14,8 +14,11 @@ from cgan_ui.utils import (
     get_data_store_path,
     get_forecast_data_files,
     get_forecast_data_dates,
+    get_ifs_forecast_dates,
+    get_cgan_forecast_dates,
 )
 from cgan_ui.constants import AOI_BBOX
+from dsrnngan.test_forecast import gen_cgan_forecast
 
 
 def standardize_dataset(da: xr.DataArray):
@@ -254,6 +257,17 @@ def syncronize_open_ifs_forecast_data(
             sf.write(-1)
 
 
+def generate_cgan_forecasts():
+    ifs_dates = get_ifs_forecast_dates()
+    gan_dates = get_cgan_forecast_dates()
+    for ifs_date in ifs_dates:
+        if ifs_date not in gan_dates:
+            # generate forecast for date
+            gen_cgan_forecast(
+                in_ifs_file=f"IFS_{ifs_date.year}{ifs_date.month:02}{ifs_date.day:02}_00Z.nc"
+            )
+
+
 def syncronize_post_processed_ifs_data(verbose: bool | None = False):
     status_file = Path(getenv("LOGS_DIR", "./")) / "post-processed-ifs.status"
 
@@ -282,6 +296,8 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
             options=["-a", "-v", "-P"],
             verbose=verbose,
         )
+
+        generate_cgan_forecasts()
 
         # set data syncronization status
         with open(status_file, "w") as sf:

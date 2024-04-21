@@ -51,6 +51,18 @@ def get_forecast_data_dates(
             return []
 
 
+def get_ifs_forecast_dates():
+    ifs_dir = get_data_store_path() / "IFS"
+    ifs_files = [fpath.split("/")[-1] for fpath in ifs_dir.iterdir()]
+    return [datetime.strptime(fname, "IFS_%Y%m%d_00Z.nc") for fname in ifs_files]
+
+
+def get_cgan_forecast_dates():
+    cgan_dir = get_data_store_path() / "GAN_forecasts"
+    gan_files = [fpath.split("/")[-1] for fpath in cgan_dir.iterdir()]
+    return [datetime.strptime(fname, "GAN_%Y%m%d.nc") for fname in gan_files]
+
+
 # Some info to be clear with dates and times
 # Arguments
 #    forecast_init_date - A datetime.datetime corresponding to when the forecast was initialised.

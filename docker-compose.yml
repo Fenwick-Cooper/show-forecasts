@@ -25,11 +25,11 @@ services:
       - ./notebooks:${APP_DIR:-/opt/app}/notebooks
 
   jobs:
-    image: ${WEBAPP_IMAGE_NAME:-icpac/cgan-jobs}
-    container_name: ${WEBAPP_CNTR_NAME:-data-pipelines}
+    image: ${JOBS_IMAGE_NAME:-icpac/cgan-jobs}
+    container_name: ${JOBS_CNTR_NAME:-data-pipelines}
     build:
       context: .
-      dockerfile: ${WEBAPP_DOCKERFILE:-docker/jobs/Dockerfile}
+      dockerfile: ${JOBS_DOCKERFILE:-docker/jobs/Dockerfile}
       args:
         APP_USER_ID: ${APP_USER_ID:-10010}
         APP_GROUP_ID: ${APP_GROUP_ID:-10010}
@@ -48,7 +48,7 @@ services:
   #   container_name: ${LAB_CNTR_NAME:-cgan-jupyter}
   #   build:
   #     context: .
-  #     dockerfile: ${WEBAPP_DOCKERFILE:-docker/lab/Dockerfile}
+  #     dockerfile: ${JUPYTER_DOCKERFILE:-docker/lab/Dockerfile}
   #     args:
   #       APP_USER_ID: ${LAB_USER_ID:-10010}
   #       APP_GROUP_ID: ${LAB_GROUP_ID:-10010}
