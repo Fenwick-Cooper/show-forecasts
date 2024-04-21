@@ -53,14 +53,40 @@ def get_forecast_data_dates(
 
 def get_ifs_forecast_dates():
     ifs_dir = get_data_store_path() / "IFS"
-    ifs_files = [fpath.split("/")[-1] for fpath in ifs_dir.iterdir()]
+    if not ifs_dir.exists():
+        ifs_dir.mkdir(parents=True)
+    ifs_files = [fpath.name for fpath in ifs_dir.iterdir()]
     return [datetime.strptime(fname, "IFS_%Y%m%d_00Z.nc") for fname in ifs_files]
 
 
 def get_cgan_forecast_dates():
     cgan_dir = get_data_store_path() / "GAN_forecasts"
-    gan_files = [fpath.split("/")[-1] for fpath in cgan_dir.iterdir()]
+    if not cgan_dir.exists():
+        cgan_dir.mkdir(parents=True)
+    gan_files = [fpath.name for fpath in cgan_dir.iterdir()]
     return [datetime.strptime(fname, "GAN_%Y%m%d.nc") for fname in gan_files]
+
+
+def set_data_sycn_status(source: str | None = "ecmwf", status: int | None = 1):
+    file_name = "post-processed-ifs.log" if source == "cgan" else "ecmwf-open-ifs.log"
+    status_file = Path(os.getenv("LOGS_DIR", "./")) / file_name
+    # initialize with not-active status
+    with open(status_file, "w") as sf:
+        sf.write(str(status))
+
+
+def get_data_sycn_status(source: str | None = "ecmwf") -> int:
+    file_name = "post-processed-ifs.log" if source == "cgan" else "ecmwf-open-ifs.log"
+    status_file = Path(os.getenv("LOGS_DIR", "./")) / file_name
+
+    if not status_file.exists():
+        # initialize with not-active status
+        with open(status_file, "w") as sf:
+            sf.write("0")
+
+    # check if there is an active data syncronization job
+    with open(status_file, "r") as sf:
+        return int(sf.read())
 
 
 # Some info to be clear with dates and times

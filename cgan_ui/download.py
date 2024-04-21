@@ -1,5 +1,4 @@
-import cfgrib
-import sysrsync
+import sysrsync, subprocess, cfgrib
 import xarray as xr
 from os import getenv
 from pathlib import Path
@@ -16,9 +15,10 @@ from cgan_ui.utils import (
     get_forecast_data_dates,
     get_ifs_forecast_dates,
     get_cgan_forecast_dates,
+    get_data_sycn_status,
+    set_data_sycn_status,
 )
 from cgan_ui.constants import AOI_BBOX
-from dsrnngan.test_forecast import gen_cgan_forecast
 
 
 def standardize_dataset(da: xr.DataArray):
@@ -172,14 +172,8 @@ def syncronize_open_ifs_forecast_data(
     force_download: bool | None = False,
     min_grib2_size: float | None = 4.1 * 1024,
 ) -> None:
-    status_file = Path(getenv("LOGS_DIR", "./")) / "open-ifs.status"
-
-    # check if there is an active data syncronization job
-    with open(status_file, "r") as sf:
-        status = sf.read()
-
     # proceed only if there is no active data syncronization job
-    if not status:
+    if not get_data_sycn_status():
         # generate down download parameters
         data_dates = get_possible_forecast_dates(data_date=date_str, dateback=dateback)
         steps = get_relevant_forecast_steps(start=start_step, final=final_step)
@@ -197,8 +191,7 @@ def syncronize_open_ifs_forecast_data(
         latest_fdate = client.latest()
 
         # set data syncronization status
-        with open(status_file, "w") as sf:
-            sf.write(1)
+        set_data_sycn_status(source="ecmwf", status=1)
 
         for data_date in data_dates:
             if latest_fdate.date() >= data_date:
@@ -253,8 +246,7 @@ def syncronize_open_ifs_forecast_data(
                 )
 
         # set data syncronization status
-        with open(status_file, "w") as sf:
-            sf.write(-1)
+        set_data_sycn_status(source="ecmwf", status=-1)
 
 
 def generate_cgan_forecasts():
@@ -263,19 +255,22 @@ def generate_cgan_forecasts():
     for ifs_date in ifs_dates:
         if ifs_date not in gan_dates:
             # generate forecast for date
-            gen_cgan_forecast(
-                in_ifs_file=f"IFS_{ifs_date.year}{ifs_date.month:02}{ifs_date.day:02}_00Z.nc"
+            in_ifs_file = (
+                f"IFS_{ifs_date.year}{ifs_date.month:02}{ifs_date.day:02}_00Z.nc"
+            )
+            subprocess.call(
+                shell=True,
+                cwd=f'{getenv("WORK_HOME","/opt/mycgan")}/dsrnngan',
+                args=f"python test_forecast.py -f {in_ifs_file}",
             )
 
 
 def syncronize_post_processed_ifs_data(verbose: bool | None = False):
-    status_file = Path(getenv("LOGS_DIR", "./")) / "post-processed-ifs.status"
-
-    # check if there is an active data syncronization job
-    with open(status_file, "r") as sf:
-        status = sf.read()
-
-    if not status:
+    logger.info(
+        f"recived post processed IFS forecast data syncronization job at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    )
+    if not get_data_sycn_status():
+        print("....")
         src_ssh = getenv("IFS_SERVER", "username@domain.example")
         assert (
             src_ssh != "username@domain.example"
@@ -285,23 +280,21 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
         logger.info("starting syncronization of IFS forecast data")
 
         # set data syncronization status
-        with open(status_file, "w") as sf:
-            sf.write(1)
+        set_data_sycn_status(source="cgan", status=1)
 
-        sysrsync.run(
-            source=src_dir,
-            destination=dest_dir,
-            source_ssh=src_ssh,
-            sync_source_contents=True,
-            options=["-a", "-v", "-P"],
-            verbose=verbose,
-        )
+        # sysrsync.run(
+        #     source=str(src_dir),
+        #     destination=str(dest_dir),
+        #     source_ssh=src_ssh,
+        #     sync_source_contents=True,
+        #     options=["-a", "-v", "-P"],
+        #     verbose=verbose,
+        # )
 
         generate_cgan_forecasts()
 
         # set data syncronization status
-        with open(status_file, "w") as sf:
-            sf.write(-1)
+        set_data_sycn_status(source="cgan", status=-1)
 
 
 if __name__ == "__main__":
