@@ -172,8 +172,14 @@ def syncronize_open_ifs_forecast_data(
     force_download: bool | None = False,
     min_grib2_size: float | None = 4.1 * 1024,
 ) -> None:
+    logger.info(
+        f"recived IFS open forecast data syncronization job at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    )
     # proceed only if there is no active data syncronization job
     if not get_data_sycn_status():
+        logger.info(
+            f"starting IFS open forecast data syncronization at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        )
         # generate down download parameters
         data_dates = get_possible_forecast_dates(data_date=date_str, dateback=dateback)
         steps = get_relevant_forecast_steps(start=start_step, final=final_step)
@@ -270,7 +276,9 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
         f"recived post processed IFS forecast data syncronization job at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     )
     if not get_data_sycn_status():
-        print("....")
+        logger.info(
+            f"starting post processed IFS forecast data syncronization at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        )
         src_ssh = getenv("IFS_SERVER", "username@domain.example")
         assert (
             src_ssh != "username@domain.example"
