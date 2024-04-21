@@ -12,7 +12,7 @@ import numpy as np
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-from datetime import timedelta, datetime
+from datetime import datetime
 import xarray as xr
 from cgan_ui.constants import DATA_PARAMS, LEAD_START_HOUR, LEAD_END_HOUR
 
@@ -159,33 +159,3 @@ def plot_forecast(
     fig.suptitle(data.attrs["name"])  # Overall title
     plt.tight_layout()  # Looks nicer
     plt.show()  # Finally draw the plot
-
-
-# Some info to be clear with dates and times
-# Arguments
-#    forecast_init_date - A datetime.datetime corresponding to when the forecast was initialised.
-def print_forecast_info(forecast_init_date):
-    start_date = forecast_init_date + timedelta(hours=LEAD_START_HOUR)
-    end_date = forecast_init_date + timedelta(hours=LEAD_START_HOUR)
-    print(f"Forecast average: {start_date} - {end_date}")
-    print(f"Forecast initialisation: {forecast_init_date.date()} 00:00:00")
-    print()
-
-
-# Lists the variables available for plotting
-# Arguments
-#    print_variables=True - print a list of the variables (True or False)
-# Returns
-#    A list of the variable names that can be used for plotting.
-def get_possible_variables(print_variables=True):
-
-    keys = list(DATA_PARAMS.keys())
-    if print_variables:
-        print("Available variables to plot are the following:")
-        for i in range(len(keys)):
-            print(
-                f"{keys[i]:<5} - {DATA_PARAMS[keys[i]]['name']} ({DATA_PARAMS[keys[i]]['units']})"
-            )
-        print()
-
-    return list(DATA_PARAMS.keys())
