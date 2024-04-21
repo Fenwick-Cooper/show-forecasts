@@ -27,19 +27,21 @@ config = {
 }
 logger.configure(**config)
 
-syncronize_open_ifs_forecast_data()
 syncronize_post_processed_ifs_data()
+syncronize_open_ifs_forecast_data()
+
 
 for hour in range(12, 24, 1):
     schedule.every().day.at(f"{str(hour).rjust(2, '0')}:00", "Africa/Nairobi").do(
-        syncronize_open_ifs_forecast_data, date_str=datetime.now().strftime("%Y-%m-%d")
-    )
-    schedule.every().day.at(f"{str(hour).rjust(2, '0')}:00", "Africa/Nairobi").do(
         syncronize_post_processed_ifs_data
     )
+    schedule.every().day.at(f"{str(hour).rjust(2, '0')}:00", "Africa/Nairobi").do(
+        syncronize_open_ifs_forecast_data, date_str=datetime.now().strftime("%Y-%m-%d")
+    )
+
 
 for job in schedule.get_jobs():
-    logger.info(f"scheduled ecmwf data download task {job}")
+    logger.info(f"scheduled forecasts data download task {job}")
 
 while True:
     all_jobs = schedule.get_jobs()
