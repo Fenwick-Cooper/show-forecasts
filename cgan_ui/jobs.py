@@ -27,6 +27,9 @@ config = {
 }
 logger.configure(**config)
 
+syncronize_post_processed_ifs_data()
+syncronize_open_ifs_forecast_data()
+
 for hour in range(12, 24, 1):
     schedule.every().day.at(f"{str(hour).rjust(2, '0')}:00", "Africa/Nairobi").do(
         syncronize_open_ifs_forecast_data, date_str=datetime.now().strftime("%Y-%m-%d")

@@ -41,7 +41,7 @@ services:
     command: ["python", "cgan_ui/jobs.py"]
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
-      - ${CGAN_LOGS_DIR:-./data/logs}:${APP_LOGS_DIR:-/opt/app}
+      - ${CGAN_LOGS_DIR:-./data/logs}:${APP_LOGS_DIR:-/opt/logs}
       - ${CGAN_MAIN_CONFIG:-./data/configs/main.yaml}:${WORK_HOME:-/opt/cgan}/dsrnngan/confg.yaml:ro
       - ${CGAN_DATA_PATHS_CONFIG:-./data/configs/data_paths.yaml}:${WORK_HOME:-/opt/cgan}/dsrnngan/data_paths.yaml:ro
       - ${CGAN_FORECAST_CONFIG:-./data/configs/forecast.yaml}:${WORK_HOME:-/opt/cgan}/dsrnngan/forecast.yaml:ro
