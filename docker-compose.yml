@@ -41,22 +41,22 @@ services:
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
 
-  jupyter:
-    image: ${LAB_IMAGE_NAME:-icpac/cgan-jupyter}
-    container_name: ${LAB_CNTR_NAME:-cgan-jupyter}
-    build:
-      context: .
-      dockerfile: ${WEBAPP_DOCKERFILE:-docker/lab/Dockerfile}
-      args:
-        APP_USER_ID: ${LAB_USER_ID:-10010}
-        APP_GROUP_ID: ${LAB_GROUP_ID:-10010}
-        WORK_HOME: ${WORK_HOME:-/opt/cgan}
-        DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
-    restart: ${RESTART_POLICY:-always}
-    command: jupyter-lab --IdentityProvider.token '' --ServerApp.base_url '/model/' --port 8000 --ip 0.0.0.0 --no-browser
-    volumes:
-      - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
-      - ./notebooks:${WORK_HOME}
+  # jupyter:
+  #   image: ${LAB_IMAGE_NAME:-icpac/cgan-jupyter}
+  #   container_name: ${LAB_CNTR_NAME:-cgan-jupyter}
+  #   build:
+  #     context: .
+  #     dockerfile: ${WEBAPP_DOCKERFILE:-docker/lab/Dockerfile}
+  #     args:
+  #       APP_USER_ID: ${LAB_USER_ID:-10010}
+  #       APP_GROUP_ID: ${LAB_GROUP_ID:-10010}
+  #       WORK_HOME: ${WORK_HOME:-/opt/cgan}
+  #       DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
+  #   restart: ${RESTART_POLICY:-always}
+  #   command: jupyter-lab --IdentityProvider.token '' --ServerApp.base_url '/model/' --port 8000 --ip 0.0.0.0 --no-browser
+  #   volumes:
+  #     - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
+  #     - ./notebooks:${WORK_HOME-/opt/cgan}
 
   nginx:
     build:
