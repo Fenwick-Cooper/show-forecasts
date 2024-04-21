@@ -252,7 +252,7 @@ def syncronize_open_ifs_forecast_data(
                 )
 
         # set data syncronization status
-        set_data_sycn_status(source="ecmwf", status=-1)
+        set_data_sycn_status(source="ecmwf", status=0)
 
 
 def generate_cgan_forecasts():
@@ -275,7 +275,7 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
     logger.info(
         f"recived post processed IFS forecast data syncronization job at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     )
-    if not get_data_sycn_status():
+    if not get_data_sycn_status(source="cgan"):
         logger.info(
             f"starting post processed IFS forecast data syncronization at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         )
@@ -303,7 +303,7 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
         generate_cgan_forecasts()
 
         # set data syncronization status
-        set_data_sycn_status(source="cgan", status=-1)
+        set_data_sycn_status(source="cgan", status=0)
 
 
 if __name__ == "__main__":
@@ -361,5 +361,7 @@ if __name__ == "__main__":
                 "received ecmwf forecast datasets post-processing task for initial download grib2 files"
             )
             post_process_downloaded_ecmwf_forecasts()
+        case "cgan":
+            syncronize_post_processed_ifs_data()
         case _:
             logger.error(f"handler for {args.command} not implemented!")

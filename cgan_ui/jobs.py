@@ -5,6 +5,7 @@ from cgan_ui.download import (
     syncronize_open_ifs_forecast_data,
     syncronize_post_processed_ifs_data,
 )
+from cgan_ui.utils import set_data_sycn_status
 from loguru import logger
 
 logger_opts = dict(
@@ -27,6 +28,9 @@ config = {
 }
 logger.configure(**config)
 
+logger.info("executing jobs warm-up tasks on scripts initialization!")
+set_data_sycn_status(source="cgan", status=0)
+set_data_sycn_status(source="ecmwf", status=0)
 syncronize_post_processed_ifs_data()
 syncronize_open_ifs_forecast_data()
 
