@@ -1,5 +1,7 @@
 import cfgrib
+import sysrsync
 import xarray as xr
+from os import getenv
 from pathlib import Path
 from typing import Dict
 from argparse import ArgumentParser
@@ -154,7 +156,7 @@ def post_process_downloaded_ecmwf_forecasts(
         )
 
 
-def download_ifs_forecast_data(
+def syncronize_open_ifs_forecast_data(
     source: str | None = "ecmwf",
     model: str | None = "ifs",
     resolution: str | None = "0p25",
@@ -167,72 +169,123 @@ def download_ifs_forecast_data(
     force_download: bool | None = False,
     min_grib2_size: float | None = 4.1 * 1024,
 ) -> None:
-    # generate down download parameters
-    data_dates = get_possible_forecast_dates(data_date=date_str, dateback=dateback)
-    steps = get_relevant_forecast_steps(start=start_step, final=final_step)
+    status_file = Path(getenv("LOGS_DIR", "./")) / "open-ifs.status"
 
-    # construct data store path
-    data_path = get_data_store_path() / source / stream
+    # check if there is an active data syncronization job
+    with open(status_file, "r") as sf:
+        status = sf.read()
 
-    # create data directory if it doesn't exist
-    if not data_path.exists():
-        data_path.mkdir(parents=True, exist_ok=True)
+    # proceed only if there is no active data syncronization job
+    if not status:
+        # generate down download parameters
+        data_dates = get_possible_forecast_dates(data_date=date_str, dateback=dateback)
+        steps = get_relevant_forecast_steps(start=start_step, final=final_step)
 
-    # create data download client
-    client = Client(source=source, model=model, resol=resolution)
-    # get latest available forecast date
-    latest_fdate = client.latest()
+        # construct data store path
+        data_path = get_data_store_path() / source / stream
 
-    for data_date in data_dates:
-        if latest_fdate.date() >= data_date:
-            requests = [
-                {
-                    "date": data_date,
-                    "step": step,
-                    "stream": stream,
-                }
-                for step in steps
-            ]
-            grib2_files = []
-            for request in requests:
-                file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
-                target_file = f"{str(data_path)}/{file_name}"
-                if (
-                    not Path(target_file).exists()
-                    or Path(target_file).stat().st_size / (1024 * 1024) < min_grib2_size
-                    or force_download
-                ):
-                    get_url = client._get_urls(
-                        request=request, target=target_file, use_index=False
-                    )
-                    logger.info(
-                        f"trying {model} data download with payload {request} on URL {get_url.urls[0]}"
-                    )
-                    for _ in range(re_try_times):
-                        result = try_data_download(
-                            client=client,
-                            request=request,
-                            target_file=target_file,
-                            model=model,
+        # create data directory if it doesn't exist
+        if not data_path.exists():
+            data_path.mkdir(parents=True, exist_ok=True)
+
+        # create data download client
+        client = Client(source=source, model=model, resol=resolution)
+        # get latest available forecast date
+        latest_fdate = client.latest()
+
+        # set data syncronization status
+        with open(status_file, "w") as sf:
+            sf.write(1)
+
+        for data_date in data_dates:
+            if latest_fdate.date() >= data_date:
+                requests = [
+                    {
+                        "date": data_date,
+                        "step": step,
+                        "stream": stream,
+                    }
+                    for step in steps
+                ]
+                grib2_files = []
+                for request in requests:
+                    file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
+                    target_file = f"{str(data_path)}/{file_name}"
+                    if (
+                        not Path(target_file).exists()
+                        or Path(target_file).stat().st_size / (1024 * 1024)
+                        < min_grib2_size
+                        or force_download
+                    ):
+                        get_url = client._get_urls(
+                            request=request, target=target_file, use_index=False
                         )
-                        if result is not None:
-                            logger.info(
-                                f"dataset for {model} forecast, {request['step']}h step, {result.datetime} successfully downloaded"
+                        logger.info(
+                            f"trying {model} data download with payload {request} on URL {get_url.urls[0]}"
+                        )
+                        for _ in range(re_try_times):
+                            result = try_data_download(
+                                client=client,
+                                request=request,
+                                target_file=target_file,
+                                model=model,
                             )
-                            break
-                else:
-                    logger.warning(
-                        f"data download job for {request['step']}h {data_date} not executed because the file exist. Pass force_download=True to re-download the files"
+                            if result is not None:
+                                logger.info(
+                                    f"dataset for {model} forecast, {request['step']}h step, {result.datetime} successfully downloaded"
+                                )
+                                break
+                    else:
+                        logger.warning(
+                            f"data download job for {request['step']}h {data_date} not executed because the file exist. Pass force_download=True to re-download the files"
+                        )
+                    grib2_files.append(file_name)
+                for grib2_file in grib2_files:
+                    post_process_ecmwf_grib2_dataset(
+                        source=source, stream=stream, grib2_file_name=grib2_file
                     )
-                grib2_files.append(file_name)
-            for grib2_file in grib2_files:
-                post_process_ecmwf_grib2_dataset(
-                    source=source, stream=stream, grib2_file_name=grib2_file
+            else:
+                logger.warning(
+                    f"IFS forecast data for {data_date} is not available. Please try again later!"
                 )
-        else:
-            logger.warning(
-                f"IFS forecast data for {data_date} is not available. Please try again later!"
-            )
+
+        # set data syncronization status
+        with open(status_file, "w") as sf:
+            sf.write(-1)
+
+
+def syncronize_post_processed_ifs_data(verbose: bool | None = False):
+    status_file = Path(getenv("LOGS_DIR", "./")) / "post-processed-ifs.status"
+
+    # check if there is an active data syncronization job
+    with open(status_file, "r") as sf:
+        status = sf.read()
+
+    if not status:
+        src_ssh = getenv("IFS_SERVER", "username@domain.example")
+        assert (
+            src_ssh != "username@domain.example"
+        ), "you must specify IFS data source server address"
+        src_dir = getenv("IFS_DIR", "/data/Operational/")
+        dest_dir = get_data_store_path() / "IFS"
+        logger.info("starting syncronization of IFS forecast data")
+
+        # set data syncronization status
+        with open(status_file, "w") as sf:
+            sf.write(1)
+
+        sysrsync.run(
+            source=src_dir,
+            destination=dest_dir,
+            source_ssh=src_ssh,
+            sync_source_contents=True,
+            options=["-a", "-v", "-P"],
+            verbose=verbose,
+        )
+
+        # set data syncronization status
+        with open(status_file, "w") as sf:
+            sf.write(-1)
 
 
 if __name__ == "__main__":
@@ -284,7 +337,7 @@ if __name__ == "__main__":
             logger.info(
                 f"received ecmwf forecast data download task with parameters {dict_args}"
             )
-            download_ifs_forecast_data(**dict_args)
+            syncronize_open_ifs_forecast_data(**dict_args)
         case "process":
             logger.info(
                 "received ecmwf forecast datasets post-processing task for initial download grib2 files"

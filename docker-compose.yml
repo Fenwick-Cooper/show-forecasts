@@ -24,22 +24,24 @@ services:
       - ./webapps:${APP_DIR:-/opt/app}/webapps
       - ./notebooks:${APP_DIR:-/opt/app}/notebooks
 
-  download:
-    image: ${WEBAPP_IMAGE_NAME:-icpac/cgan-ui}
-    container_name: ${WEBAPP_CNTR_NAME:-data-download}
+  jobs:
+    image: ${WEBAPP_IMAGE_NAME:-icpac/cgan-jobs}
+    container_name: ${WEBAPP_CNTR_NAME:-data-pipelines}
     build:
       context: .
-      dockerfile: ${WEBAPP_DOCKERFILE:-docker/webapp/Dockerfile}
+      dockerfile: ${WEBAPP_DOCKERFILE:-docker/jobs/Dockerfile}
       args:
         APP_USER_ID: ${APP_USER_ID:-10010}
         APP_GROUP_ID: ${APP_GROUP_ID:-10010}
         WORK_HOME: ${WORK_HOME:-/opt/cgan}
         APP_DIR: ${APP_DIR:-/opt/app}
         DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
+        LOGS_DIR: ${APP_LOGS_DIR:-/opt/logs}
     restart: ${RESTART_POLICY:-always}
-    command: ["python", "cgan_ui/download.py", "-p", "1"]
+    command: ["tail", "-f", "/etc/hosts"]
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
+      - ${CGAN_LOGS_DIR:-./data/logs}:${APP_LOGS_DIR:-/opt/app}
 
   # jupyter:
   #   image: ${LAB_IMAGE_NAME:-icpac/cgan-jupyter}
