@@ -297,7 +297,7 @@ def generate_cgan_forecasts():
             )
             subprocess.call(
                 shell=True,
-                cwd=f'{getenv("WORK_HOME","/opt/mycgan")}/dsrnngan',
+                cwd=f'{getenv("WORK_HOME","/opt/mycgan")}/ensemble-cgan/dsrnngan',
                 args=f"python test_forecast.py -f {in_ifs_file}",
             )
 
