@@ -282,14 +282,15 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
         # set data syncronization status
         set_data_sycn_status(source="cgan", status=1)
 
-        # sysrsync.run(
-        #     source=str(src_dir),
-        #     destination=str(dest_dir),
-        #     source_ssh=src_ssh,
-        #     sync_source_contents=True,
-        #     options=["-a", "-v", "-P"],
-        #     verbose=verbose,
-        # )
+        sysrsync.run(
+            source=str(src_dir),
+            destination=str(dest_dir),
+            source_ssh=src_ssh,
+            private_key=getenv("IFS_PRIVATE_KEY", "/srv/ssl/private.key"),
+            sync_source_contents=True,
+            options=["-a", "-v", "-P"],
+            verbose=verbose,
+        )
 
         generate_cgan_forecasts()
 
