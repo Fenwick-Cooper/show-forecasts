@@ -39,6 +39,9 @@ services:
         LOGS_DIR: ${APP_LOGS_DIR:-/opt/logs}
     restart: ${RESTART_POLICY:-always}
     command: ["python", "cgan_ui/jobs.py"]
+    environment:
+      - DATA_STORE_DIR=${DATA_STORE_DIR:-/opt/store}
+      - IFS_SERVER=${IFS_SERVER:-username@domain.example}
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
       - ${CGAN_LOGS_DIR:-./data/logs}:${APP_LOGS_DIR:-/opt/logs}
