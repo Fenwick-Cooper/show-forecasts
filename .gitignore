@@ -5,6 +5,7 @@
 *.zarr
 .env
 *.sqlite
+*.yaml
 celery*
 __pycache__
 .ipynb_checkpoints
