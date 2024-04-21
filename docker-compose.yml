@@ -38,16 +38,7 @@ services:
         DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
         LOGS_DIR: ${APP_LOGS_DIR:-/opt/logs}
     restart: ${RESTART_POLICY:-always}
-    command:
-      [
-        "ssh-keyscan",
-        "${IFS_SERVER_HOST:-domain.example}",
-        ">>",
-        "~/.ssh/known_hosts",
-        "&&",
-        "python",
-        "cgan_ui/jobs.py",
-      ]
+    command: ["sh", "entrypoint.sh"]
     environment:
       - DATA_STORE_DIR=${DATA_STORE_DIR:-/opt/store}
       - IFS_SERVER_HOST=${IFS_SERVER_HOST:-domain.example}

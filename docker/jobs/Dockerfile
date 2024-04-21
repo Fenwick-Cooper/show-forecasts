@@ -28,6 +28,7 @@ WORKDIR ${APP_DIR}
 
 COPY --chown=mycgan:root --chmod=0754 poetry.lock pyproject.toml README.md welcome.md ${APP_DIR}
 COPY --chown=mycgan:root --chmod=0754 ./cgan_ui ${APP_DIR}/cgan_ui
+COPY --chmod=0754 --chown=mycgan:root ./docker/jobs/entrypoint.sh ${APP_DIR}/
 
 ENV PATH=${WORK_HOME}/bin:${VENV_DIR}/bin:$PATH WORK_HOME=${WORK_HOME} APP_DIR=${APP_DIR} \
     LOGS_DIR=${LOGS_DIR} DATA_STORE_DIR=${DATA_STORE_DIR} VENV_DIR=${VENV_DIR}
@@ -35,7 +36,6 @@ ENV PATH=${WORK_HOME}/bin:${VENV_DIR}/bin:$PATH WORK_HOME=${WORK_HOME} APP_DIR=$
 RUN python -m venv ${VENV_DIR} && \
     . ${VENV_DIR}/bin/activate && \
     cd ${WORK_HOME}/ensemble-cgan && pip install --no-cache -e . && \
-    cd ${APP_DIR} && pip install --no-cache -e . && \
-    mkdir ${WORK_HOME}/.ssh
+    cd ${APP_DIR} && pip install --no-cache -e .
 
 

@@ -316,7 +316,7 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
         assert (
             src_ssh != "username@domain.example"
         ), "you must specify IFS data source server address"
-        src_dir = getenv("IFS_DIR", "/data/Operational/")
+        src_dir = getenv("IFS_DIR", "/data/Operational")
         dest_dir = get_data_store_path() / "IFS"
         logger.info("starting syncronization of IFS forecast data")
 
@@ -325,7 +325,7 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
 
         sysrsync.run(
             source=str(src_dir),
-            destination=str(dest_dir),
+            destination=f"{str(dest_dir)}/",
             source_ssh=src_ssh,
             private_key=getenv("IFS_PRIVATE_KEY", "/srv/ssl/private.key"),
             sync_source_contents=True,
