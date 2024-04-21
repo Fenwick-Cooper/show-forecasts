@@ -6,7 +6,7 @@ ARG WORK_HOME=/opt/mycgan
 ARG APP_DIR=/opt/app
 ARG VENV_DIR=/opt/venv
 ARG LOGS_DIR=/opt/logs
-ARG DATA_STORE_DIR=${APP_DIR}/store
+ARG DATA_STORE_DIR=/opt/store
 
 # install system libraries
 RUN apt-get update -y && \

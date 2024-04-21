@@ -38,7 +38,7 @@ services:
         DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
         LOGS_DIR: ${APP_LOGS_DIR:-/opt/logs}
     restart: ${RESTART_POLICY:-always}
-    command: ["tail", "-f", "/etc/hosts"]
+    command: ["python", "cgan_ui/jobs.py"]
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
       - ${CGAN_LOGS_DIR:-./data/logs}:${APP_LOGS_DIR:-/opt/app}
