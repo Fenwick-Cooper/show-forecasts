@@ -102,48 +102,79 @@ def post_process_ecmwf_grib2_dataset(
     source: str | None = "ecmwf",
     stream: str | None = "enfo",
     re_try_times: int | None = 5,
+    force_unlink: bool | None = False,
 ) -> None:
     logger.info(f"executing post-processing task for {grib2_file_name}")
     store_path = get_data_store_path()
-    file_path = f"{store_path}/{source}/{stream}/{grib2_file_name}"
-    for _ in range(re_try_times):
-        ds = read_dataset(file_path)
-        if ds is not None:
-            break
-    if ds is None:
-        logger.error(
-            f"failed to read {file_path} after {re_try_times} unsuccessful trials"
-        )
-    else:
-        # save entire raw data file to disk in zarr format
-        zarr_file = grib2_file_name.replace("grib2", "zarr")
-        write_job = ds.chunk().to_zarr(
-            f"{store_path}/raw/{source}/{stream}/{zarr_file}", mode="w", compute=False
-        )
-        with ProgressBar():
-            logger.info(f"writing {grib2_file_name} dataset to {zarr_file}")
-            write_job.compute()
-        # release memory space occupied by write_job
-        write_job = None
-        # process area specific masks
-        for key in AOI_BBOX.keys():
-            logger.info(f"processing {grib2_file_name} mask for {key}")
-            sliced = slice_dataset_by_bbox(ds, AOI_BBOX[key])
-            out_dir = store_path / "interim" / key / source / stream
-            if not out_dir.exists():
-                out_dir.mkdir(parents=True)
-            sliced.to_netcdf(out_dir / grib2_file_name.replace("grib2", "nc"))
-            logger.info(f"saved {grib2_file_name} mask for {key} successfully")
-        # remove grib2 file from disk
-        # grib2_path: Path = store_path / source / stream / grib2_file_name
-        # logger.info(f"deleting {grib2_file_name} from disk")
-        # try:
-        #     grib2_path.unlink(missing_ok=False)
-        # except Exception as err:
-        #     logger.error(f"failed to delete {grib2_file_name} with error {err}")
-        # # remove associated idx file
-        # idx_path: Path = store_path / source / stream / f"{grib2_file_name}.923a8.idx"
-        # idx_path.unlink(missing_ok=True)
+    ea_nc_file = (
+        store_path
+        / "interim"
+        / "EA"
+        / source
+        / stream
+        / grib2_file_name.replace("grib2", "nc")
+    )
+    if not ea_nc_file.exists() or force_unlink:
+        logger.info(f"post-processing ECMWF IFS forecast data file {grib2_file_name}")
+        grib2_dir = store_path / source / stream
+        file_path = f"{grib2_dir}/{grib2_file_name}"
+        for _ in range(re_try_times):
+            ds = read_dataset(file_path)
+            if ds is not None:
+                break
+        if ds is None:
+            logger.error(
+                f"failed to read {file_path} after {re_try_times} unsuccessful trials"
+            )
+        else:
+            # save entire raw data file to disk in zarr format
+            # zarr_file = grib2_file_name.replace("grib2", "zarr")
+            # write_job = ds.chunk().to_zarr(
+            #     f"{store_path}/raw/{source}/{stream}/{zarr_file}",
+            #     mode="w",
+            #     compute=False,
+            # )
+            # with ProgressBar():
+            #     logger.info(f"writing {grib2_file_name} dataset to {zarr_file}")
+            #     write_job.compute()
+            # # release memory space occupied by write_job
+            # write_job = None
+            # process area specific masks
+            for key in AOI_BBOX.keys():
+                logger.info(f"processing {grib2_file_name} mask for {key}")
+                sliced = slice_dataset_by_bbox(ds, AOI_BBOX[key])
+                out_dir = store_path / "interim" / key / source / stream
+                if not out_dir.exists():
+                    out_dir.mkdir(parents=True)
+                nc_file = out_dir / grib2_file_name.replace("grib2", "nc")
+                if nc_file.exists():
+                    nc_file.unlink()
+
+                sliced.to_netcdf(out_dir / grib2_file_name.replace("grib2", "nc"))
+                logger.info(f"saved {grib2_file_name} mask for {key} successfully")
+            # remove grib2 file from disk
+            logger.info(f"archiving {grib2_file_name}")
+            archive_dir = store_path / "archive"
+            if not archive_dir.exists():
+                archive_dir.mkdir(parents=True)
+
+            try:
+                Path(file_path).replace(
+                    target=archive_dir / source / stream / f"{grib2_file_name}"
+                )
+            except Exception as err:
+                logger.error(f"failed to archive {grib2_file_name} with error {err}")
+            # remove idx files from the disk
+            idx_files = [
+                idxf for idxf in grib2_dir.iterdir() if idxf.name.endswith(".idx")
+            ]
+            for idx_file in idx_files:
+                try:
+                    idx_file.unlink()
+                except Exception as err:
+                    logger.error(
+                        f"failed to delete grib2 index file {idx_file.name} with error {err}"
+                    )
 
 
 def post_process_downloaded_ecmwf_forecasts(
@@ -279,7 +310,9 @@ def syncronize_post_processed_ifs_data(verbose: bool | None = False):
         logger.info(
             f"starting post processed IFS forecast data syncronization at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         )
-        src_ssh = getenv("IFS_SERVER", "username@domain.example")
+        ifs_host = getenv("IFS_SERVER_HOST", "domain.example")
+        ifs_user = getenv("IFS_SERVER_USER", "username")
+        src_ssh = f"{ifs_user}@{ifs_host}"
         assert (
             src_ssh != "username@domain.example"
         ), "you must specify IFS data source server address"

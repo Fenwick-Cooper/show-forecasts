@@ -38,10 +38,20 @@ services:
         DATA_STORE_DIR: ${DATA_STORE_DIR:-/opt/store}
         LOGS_DIR: ${APP_LOGS_DIR:-/opt/logs}
     restart: ${RESTART_POLICY:-always}
-    command: ["python", "cgan_ui/jobs.py"]
+    command:
+      [
+        "ssh-keyscan",
+        "${IFS_SERVER_HOST:-domain.example}",
+        ">>",
+        "~/.ssh/known_hosts",
+        "&&",
+        "python",
+        "cgan_ui/jobs.py",
+      ]
     environment:
       - DATA_STORE_DIR=${DATA_STORE_DIR:-/opt/store}
-      - IFS_SERVER=${IFS_SERVER:-username@domain.example}
+      - IFS_SERVER_HOST=${IFS_SERVER_HOST:-domain.example}
+      - IFS_SERVER_USER=${IFS_SERVER_USER:-username}
       - IFS_PRIVATE_KEY=${IFS_PRIVATE_KEY:-/srv/ssl/private.key}
     volumes:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}

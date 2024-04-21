@@ -17,7 +17,7 @@ RUN apt-get update -y && \
 
 # service runtime filesystem directories
 RUN mkdir -p ${WORK_HOME} ${APP_DIR} ${DATA_STORE_DIR} ${VENV_DIR} && \
-    git clone --depth 1 -b Jurre_brishti https://github.com/jaysnm/ensemble-cgan.git ${WORK_HOME} 
+    git clone --depth 1 -b Jurre_brishti https://github.com/jaysnm/ensemble-cgan.git ${WORK_HOME}/ensemble-cgan
 
 RUN groupadd --gid ${APP_GROUP_ID} mycgan && \ 
     useradd --home-dir ${WORK_HOME} --uid ${APP_USER_ID} --gid ${APP_GROUP_ID} mycgan && \
@@ -34,6 +34,8 @@ ENV PATH=${WORK_HOME}/bin:${VENV_DIR}/bin:$PATH WORK_HOME=${WORK_HOME} APP_DIR=$
 
 RUN python -m venv ${VENV_DIR} && \
     . ${VENV_DIR}/bin/activate && \
-    cd ${WORK_HOME} && pip install --no-cache -e . && \
-    cd ${APP_DIR} && pip install --no-cache -e .
+    cd ${WORK_HOME}/ensemble-cgan && pip install --no-cache -e . && \
+    cd ${APP_DIR} && pip install --no-cache -e . && \
+    mkdir ${WORK_HOME}/.ssh
+
 
