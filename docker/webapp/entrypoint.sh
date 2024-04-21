@@ -15,12 +15,10 @@ until cd ${WORK_HOME}/mercury &&
 done
 
 echo "Docker: Add mercury web applications"
-# for filepath in ${APP_DIR}/webapps/*.ipynb; do
-#     echo "Docker: Add " $filepath
-#     python manage.py add $filepath
-# done
-echo "Docker: Add " ${APP_DIR}/webapps/ecmwf-ensemble-visualization.ipynb
-python manage.py add ${APP_DIR}/webapps/ecmwf-ensemble-visualization.ipynb
+for filepath in ${APP_DIR}/webapps/*.ipynb; do
+    echo "Docker: Add " $filepath
+    python manage.py add $filepath
+done
 
 echo "Docker: Collect statics, for Admin Panel, DRF views"
 python manage.py collectstatic --noinput
