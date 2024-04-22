@@ -38,15 +38,23 @@ def get_forecast_data_dates(
             data_dates = sorted(
                 sorted(set([dfile.split("-")[0] for dfile in data_files]))
             )
-            return [
-                datetime.strptime(dt, "%Y%m%d%H%M%S").strftime("%b %d, %Y")
-                for dt in data_dates
-            ]
+            return list(
+                reversed(
+                    [
+                        datetime.strptime(dt, "%Y%m%d%H%M%S").strftime("%b %d, %Y")
+                        for dt in data_dates
+                    ]
+                )
+            )
         case "cgan":
-            return [
-                datetime.strptime(dfile, "GAN_%Y%m%d.nc").strftime("%b %d, %Y")
-                for dfile in sorted(data_files)
-            ]
+            return list(
+                reversed(
+                    [
+                        datetime.strptime(dfile, "GAN_%Y%m%d.nc").strftime("%b %d, %Y")
+                        for dfile in sorted(data_files)
+                    ]
+                )
+            )
         case _:
             return []
 

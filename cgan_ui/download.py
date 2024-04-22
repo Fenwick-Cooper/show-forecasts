@@ -102,7 +102,7 @@ def post_process_ecmwf_grib2_dataset(
     source: str | None = "ecmwf",
     stream: str | None = "enfo",
     re_try_times: int | None = 5,
-    force_unlink: bool | None = False,
+    force_process: bool | None = False,
 ) -> None:
     logger.info(f"executing post-processing task for {grib2_file_name}")
     store_path = get_data_store_path()
@@ -114,7 +114,7 @@ def post_process_ecmwf_grib2_dataset(
         / stream
         / grib2_file_name.replace("grib2", "nc")
     )
-    if not ea_nc_file.exists() or force_unlink:
+    if not ea_nc_file.exists() or force_process:
         logger.info(f"post-processing ECMWF IFS forecast data file {grib2_file_name}")
         grib2_dir = store_path / source / stream
         file_path = f"{grib2_dir}/{grib2_file_name}"
@@ -184,7 +184,7 @@ def post_process_downloaded_ecmwf_forecasts(
     )
     for grib2_file in grib2_files:
         post_process_ecmwf_grib2_dataset(
-            source=source, stream=stream, grib2_file_name=grib2_file
+            source=source, stream=stream, grib2_file_name=grib2_file, force_process=True
         )
 
 
