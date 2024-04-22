@@ -154,14 +154,12 @@ def post_process_ecmwf_grib2_dataset(
                 logger.info(f"saved {grib2_file_name} mask for {key} successfully")
             # remove grib2 file from disk
             logger.info(f"archiving {grib2_file_name}")
-            archive_dir = store_path / "archive"
+            archive_dir = store_path / "archive" / source / stream
             if not archive_dir.exists():
                 archive_dir.mkdir(parents=True)
 
             try:
-                Path(file_path).replace(
-                    target=archive_dir / source / stream / f"{grib2_file_name}"
-                )
+                Path(file_path).replace(target=archive_dir / f"{grib2_file_name}")
             except Exception as err:
                 logger.error(f"failed to archive {grib2_file_name} with error {err}")
             # remove idx files from the disk
