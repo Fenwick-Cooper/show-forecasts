@@ -12,6 +12,8 @@
 import numpy as np
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
+import cartopy.io.shapereader as shpreader
+from cartopy.feature import ShapelyFeature
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import cfgrib
@@ -222,15 +224,21 @@ def load_forecast(key, forecast_init_date, data_dir, status_updates=True):
 # Plot the ensemble mean and ensemble standard deviation of the forecast data
 def plot_forecast(data):
 
+    # Load the border shapefile
+    reader = shpreader.Reader("show_forecasts/GHA_shapes/gha.shp")
+    shape_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+    
     # Define the figure and each axis for the rows and columns
     fig, axs = plt.subplots(nrows=1, ncols=2, subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10,5))
 
     # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
     axs=axs.flatten()
 
+    data["valid_time"] + timedelta(hours=24)
+    
     ax=axs[0]  # First plot (left)
     ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
-    ax.add_feature(cfeature.BORDERS, linewidth=1)
+    ax.add_feature(shape_feature)  # The borders
     ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
     # Actually make the plot
     c = ax.pcolormesh(data['longitude'], data['latitude'], np.mean(data, axis=0),
@@ -241,7 +249,7 @@ def plot_forecast(data):
 
     ax=axs[1]  # Second plot (right)
     ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
-    ax.add_feature(cfeature.BORDERS, linewidth=1)
+    ax.add_feature(shape_feature)  # The borders
     ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
     # Actually make the plot
     c = ax.pcolormesh(data['longitude'], data['latitude'], np.std(data, axis=0, ddof=1),
@@ -252,6 +260,84 @@ def plot_forecast(data):
 
     fig.suptitle(data.attrs['name'])  # Overall title
     plt.tight_layout()  # Looks nicer
+    plt.show()  # Finally draw the plot
+
+    
+# Plot all ensemble members in the forecast data at a specified valid time.
+# Arguments
+#    data                  - An xarray DataSet containing the cGAN rainfall forecasts.
+#    valid_time_start_hour - The hour the valid time starts at. Can either be 6, 12, 18 or 0.
+def plot_forecast_ensemble(data, valid_time_start_hour, style=None, plot_units='mm/h'):
+    
+    # Change valid_time_start_hour into the valid_time_idx
+    if (valid_time_start_hour == 6):
+        valid_time_idx = 0
+    elif (valid_time_start_hour == 12):
+        valid_time_idx = 1
+    elif (valid_time_start_hour == 18):
+        valid_time_idx = 2
+    elif (valid_time_start_hour == 0):
+        valid_time_idx = 3
+    else:
+        print("ERROR: valid_time_start_hour must be 6, 12, 18 or 0.")
+        return
+
+    if (plot_units == 'mm/h'):
+        plot_norm = 1
+    elif (plot_units == 'mm/day'):
+        plot_norm = 24
+    elif (plot_units == 'mm/week'):
+        plot_norm = 7*24
+    else:
+        print(f"ERROR: Unknown plot units {plot_units}")
+        print(f"       Options are 'mm/h', 'mm/day', 'mm/week'.")
+        return
+
+    # Use a style other than the default
+    if (style is not None):
+        plot_levels, plot_colours = get_contour_levels(style)
+
+    # Load the border shapefile
+    reader = shpreader.Reader("show_forecasts/GHA_shapes/gha.shp")
+    shape_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+    
+    # Convert the forecast valid time to a datetime.datetime format
+    valid_time = datetime64_to_datetime(data['fcst_valid_time'][0,valid_time_idx].values)
+
+    # To be consistent with the Harris et. al paper.
+    value_range_precip = (0.1, 15)
+
+    # Define the figure and each axis for the rows and columns
+    fig, axs = plt.subplots(nrows=10, ncols=5, subplot_kw={'projection': ccrs.PlateCarree()},
+                            figsize=(10,25), layout="constrained")
+
+    # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
+    axs=axs.flatten()
+
+    # For each ensemble member
+    for ax_idx in range(data['member'].size):
+
+        ax=axs[ax_idx]  # First plot (left)
+        ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
+        ax.add_feature(shape_feature)  # The borders
+        ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
+        # Actually make the plot
+        if (style == None):
+            c = ax.pcolormesh(data['longitude'], data['latitude'], data['precipitation'][0,ax_idx,valid_time_idx,:,:] * plot_norm,
+                              norm=colors.LogNorm(*value_range_precip), cmap='YlGnBu', transform=ccrs.PlateCarree())
+        else:
+            c = ax.contourf(data['longitude'], data['latitude'], data['precipitation'][0,ax_idx,valid_time_idx,:,:] * plot_norm,
+                            colors=plot_colours, levels=plot_levels*plot_norm, transform=ccrs.PlateCarree())
+        ax.set_title(f"{ax_idx+1}",size=14)  # This plot's title
+
+    # Add a final colorbar with a nice size
+    if (style == None):
+        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.4, pad=0.01) 
+    else:
+        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.4, pad=0.01, ticks=plot_levels*plot_norm) 
+    cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
+
+    fig.suptitle(f"Jurre Brishti cGAN ensemble: Valid {valid_time} - {valid_time + timedelta(hours=6)}")  # Overall title
     plt.show()  # Finally draw the plot
 
     
