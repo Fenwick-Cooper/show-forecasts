@@ -46,6 +46,8 @@ def get_region_extent(region, border_size=0.5):
         bbox = np.array(sf.shape(i).bbox)
     else:
         bbox = np.array(sf.bbox)
+        if (region != "ICPAC"):
+            print(f"Warning: Region '{region}' is not known")
 
     # The boundary of the region in the form of a cartopy extent
     country_extent = [bbox[0] - border_size,

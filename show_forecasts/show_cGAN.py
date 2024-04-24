@@ -47,6 +47,9 @@ def plot_GAN_forecast(data, style=None, plot_units='mm/h', region='ICPAC'):
     # Get the units to use for plotting
     plot_norm = get_plot_normalisation(plot_units)
     
+    # To be consistent with the Harris et. al paper.
+    value_range_precip = (0.1, 15 * plot_norm)
+    
     # Use a style other than the default
     if (style is not None):
         plot_levels, plot_colours = get_contour_levels(style)
@@ -64,9 +67,6 @@ def plot_GAN_forecast(data, style=None, plot_units='mm/h', region='ICPAC'):
 
         # Convert the forecast valid time to a datetime.datetime format
         valid_time = datetime64_to_datetime(data['fcst_valid_time'][0,valid_time_idx].values)
-
-        # To be consistent with the Harris et. al paper.
-        value_range_precip = (0.1, 15 * plot_norm)
 
         # Define the figure and each axis for the rows and columns
         fig, axs = plt.subplots(nrows=1, ncols=2, subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(10,5))
@@ -132,6 +132,9 @@ def plot_GAN_ensemble(data, valid_time_start_hour, style=None, plot_units='mm/h'
     # Get the units to use for plotting
     plot_norm = get_plot_normalisation(plot_units)
 
+    # To be consistent with the Harris et. al paper.
+    value_range_precip = (0.1, 15 * plot_norm)
+    
     # Use a style other than the default
     if (style is not None):
         plot_levels, plot_colours = get_contour_levels(style)
@@ -144,11 +147,21 @@ def plot_GAN_ensemble(data, valid_time_start_hour, style=None, plot_units='mm/h'
     if (region != 'ICPAC'):
         region_extent = get_region_extent(region, border_size=0.5)
     
+    # Change valid_time_start_hour into the valid_time_idx
+    if (valid_time_start_hour == 6):
+        valid_time_idx = 0
+    elif (valid_time_start_hour == 12):
+        valid_time_idx = 1
+    elif (valid_time_start_hour == 18):
+        valid_time_idx = 2
+    elif (valid_time_start_hour == 0):
+        valid_time_idx = 3
+    else:
+        print("ERROR: valid_time_start_hour must be 6, 12, 18 or 0.")
+        return
+    
     # Convert the forecast valid time to a datetime.datetime format
     valid_time = datetime64_to_datetime(data['fcst_valid_time'][0,valid_time_idx].values)
-
-    # To be consistent with the Harris et. al paper.
-    value_range_precip = (0.1, 15)
 
     # Define the figure and each axis for the rows and columns
     fig, axs = plt.subplots(nrows=10, ncols=5, subplot_kw={'projection': ccrs.PlateCarree()},
