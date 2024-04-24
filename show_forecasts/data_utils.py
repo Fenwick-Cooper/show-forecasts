@@ -4,9 +4,33 @@ import numpy as np
 from datetime import datetime
 import shapefile
 
+
+# Returns the normalisation used to plot
+# Arguments
+#   plot_units='mm/h' - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
+# Returns
+#   The normalisation to apply when plotting or 1 if the units are not specified correctly
+def get_plot_normalisation(plot_units):
+    if (plot_units == 'mm/h'):
+        plot_norm = 1
+    elif (plot_units == 'mm/6h'):
+        plot_norm = 6
+    elif (plot_units == 'mm/day'):
+        plot_norm = 24
+    elif (plot_units == 'mm/week'):
+        plot_norm = 7*24
+    else:
+        print(f"ERROR: Unknown plot units {plot_units}")
+        print(f"       Options are 'mm/h', 'mm/6h', 'mm/day', 'mm/week'.")
+        return 1
+    return plot_norm
+
+
 # Returns the bounding box of the region that we want to plot
-#
-#    border_size - Area around the region in degrees to include in the plot
+# Arguments
+#   region='ICPAC' - can be 'ICPAC', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
+#                    'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
+#    border_size   - Area around the region in degrees to include in the plot
 def get_region_extent(region, border_size=0.5):
     
     # The countries in the shapefile

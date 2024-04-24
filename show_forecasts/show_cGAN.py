@@ -16,7 +16,8 @@ from matplotlib.colors import ListedColormap
 from datetime import datetime, timedelta
 import cfgrib
 import xarray as xr
-from .data_utils import datetime64_to_datetime, get_contour_levels, get_region_extent
+#from .data_utils import datetime64_to_datetime, get_contour_levels, get_region_extent, get_plot_normalisation
+from .data_utils import *
 
 
 # Load a 24 hour mean forecast at a lead time of 30 to 54 hours
@@ -43,18 +44,8 @@ def load_GAN_forecast(forecast_init_date, data_dir):
 #                       'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
 def plot_GAN_forecast(data, style=None, plot_units='mm/h', region='ICPAC'):
     
-    if (plot_units == 'mm/h'):
-        plot_norm = 1
-    elif (plot_units = 'mm/6h'):
-        plot_norm = 6
-    elif (plot_units == 'mm/day'):
-        plot_norm = 24
-    elif (plot_units == 'mm/week'):
-        plot_norm = 7*24
-    else:
-        print(f"ERROR: Unknown plot units {plot_units}")
-        print(f"       Options are 'mm/h', 'mm/day', 'mm/week'.")
-        return
+    # Get the units to use for plotting
+    plot_norm = get_plot_normalisation(plot_units)
     
     # Use a style other than the default
     if (style is not None):
@@ -138,31 +129,8 @@ def plot_GAN_forecast(data, style=None, plot_units='mm/h', region='ICPAC'):
 #                           'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
 def plot_GAN_ensemble(data, valid_time_start_hour, style=None, plot_units='mm/h', region='ICPAC'):
     
-    # Change valid_time_start_hour into the valid_time_idx
-    if (valid_time_start_hour == 6):
-        valid_time_idx = 0
-    elif (valid_time_start_hour == 12):
-        valid_time_idx = 1
-    elif (valid_time_start_hour == 18):
-        valid_time_idx = 2
-    elif (valid_time_start_hour == 0):
-        valid_time_idx = 3
-    else:
-        print("ERROR: valid_time_start_hour must be 6, 12, 18 or 0.")
-        return
-
-    if (plot_units == 'mm/h'):
-        plot_norm = 1
-    elif (plot_units = 'mm/6h'):
-        plot_norm = 6
-    elif (plot_units == 'mm/day'):
-        plot_norm = 24
-    elif (plot_units == 'mm/week'):
-        plot_norm = 7*24
-    else:
-        print(f"ERROR: Unknown plot units {plot_units}")
-        print(f"       Options are 'mm/h', 'mm/day', 'mm/week'.")
-        return
+    # Get the units to use for plotting
+    plot_norm = get_plot_normalisation(plot_units)
 
     # Use a style other than the default
     if (style is not None):
