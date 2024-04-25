@@ -73,7 +73,7 @@ def get_contour_levels(style):
         #ffffff rgb(255, 255, 255)  Less than heavy
 
         # XXX Incorrect levels for ICPAC Heavy
-        plot_levels = np.array([0,50,100,200,400]) / (7*24)  # Convert from mm/week to mm/h
+        plot_levels = np.array([0,50,100,200,1000]) / (7*24)  # Convert from mm/week to mm/h
         plot_colours = [[1.        , 1.        , 1.        , 1.        ],
                         [0.68627451, 0.93333333, 0.93333333, 1.        ],
                         [0.09411765, 0.45490196, 0.80392157, 1.        ],
@@ -90,7 +90,7 @@ def get_contour_levels(style):
         #ffa500 rgb(255, 165, 0)    1-10 mm/day
         #d9d9d9 rgb(217, 217, 217)  Less than 1 mm/day
 
-        plot_levels = np.array([0,1,10,30,50,100,200,800]) / (7*24)  # Convert from mm/week to mm/h
+        plot_levels = np.array([0,1,10,30,50,100,200,1000]) / (7*24)  # Convert from mm/week to mm/h
         plot_colours = [[0.85098039, 0.85098039, 0.85098039, 1.        ],
                         [1.        , 0.64705882, 0.        , 1.        ],
                         [1.        , 1.        , 0.        , 1.        ],
@@ -118,7 +118,7 @@ def get_contour_levels(style):
         #3ef600 rgb(62, 246, 0)     2-5 mm/day
         #ffffff rgb(255, 255, 255)  Less than 1 mm/day
 
-        plot_levels = np.array([0,2,5,10,15,20,25,30,35,40,50,60,70,80,100,200]) / 24  # Convert from mm/day to mm/h
+        plot_levels = np.array([0,2,5,10,15,20,25,30,35,40,50,60,70,80,100,1000]) / 24  # Convert from mm/day to mm/h
         plot_colours = [[1.        , 1.        , 1.        , 1.        ],
                         [0.24313725, 0.96470588, 0.        , 1.        ],
                         [0.22352941, 0.85098039, 0.01568627, 1.        ],
@@ -144,7 +144,7 @@ def get_contour_levels(style):
         #ffffff rgb(255, 255, 255)  Less than heavy
 
         # XXX Incorrect levels for EMI Heavy
-        plot_levels = np.array([0,50,100,200,400]) / (7*24)  # Convert from mm/week to mm/h
+        plot_levels = np.array([0,50,100,200,1000]) / (7*24)  # Convert from mm/week to mm/h
         plot_colours = [[1.        , 1.        , 1.        , 1.        ],
                         [0.68627451, 0.93333333, 0.93333333, 1.        ],
                         [0.09411765, 0.45490196, 0.80392157, 1.        ],
@@ -163,7 +163,7 @@ def get_contour_levels(style):
         #ffa500 rgb(255, 165, 0)    1-5 mm/day
         #d9d9d9 rgb(217, 217, 217)  Less than 1 mm/day
 
-        plot_levels = np.array([0,1,5,10,20,30,50,75,100,200]) / 24  # Convert from mm/day to mm/h
+        plot_levels = np.array([0,1,5,10,20,30,50,75,100,1000]) / 24  # Convert from mm/day to mm/h
         plot_colours = [[0.85098039, 0.85098039, 0.85098039, 1.        ],
                         [1.        , 0.64705882, 0.        , 1.        ],
                         [1.        , 1.        , 0.        , 1.        ],
