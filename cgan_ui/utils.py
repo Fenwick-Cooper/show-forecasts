@@ -1,4 +1,4 @@
-import os
+import os, re
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -7,6 +7,25 @@ from cgan_ui.constants import LEAD_START_HOUR, LEAD_END_HOUR, DATA_PARAMS
 
 def get_data_store_path() -> Path:
     return Path(os.getenv("DATA_STORE_DIR", str(Path("./store")))).absolute()
+
+
+def get_possible_forecast_dates(
+    data_date: str | None = None, dateback: int | None = 4
+) -> list[datetime.date]:
+    if data_date is not None:
+        return [datetime.strptime(data_date, "%Y-%m-%d").date()]
+    now = datetime.now()
+    dates = [now.date()]
+    for i in range(1, dateback + 1):
+        new_date = now - timedelta(days=i)
+        dates.append(new_date.date())
+    return dates
+
+
+def get_relevant_forecast_steps(
+    start: int | None = 30, final: int | None = 54, step: int | None = 3
+) -> list[int]:
+    return [step for step in range(start, final + 1, step)]
 
 
 def get_forecast_data_files(
@@ -29,15 +48,45 @@ def get_forecast_data_files(
 
 
 def get_forecast_data_dates(
-    mask: str | None = None, source: str | None = "ecmwf", stream: str | None = "enfo"
+    mask: str | None = None,
+    source: str | None = "ecmwf",
+    stream: str | None = "enfo",
+    check_steps: bool | None = False,
 ) -> list[str]:
     data_files = get_forecast_data_files(source=source, stream=stream, mask=mask)
     # extract forecast initialization dates
     match source:
         case "ecmwf":
-            data_dates = sorted(
-                sorted(set([dfile.split("-")[0] for dfile in data_files]))
-            )
+            # be sure all IFS time steps were synced
+            if check_steps:
+                r = re.compile(
+                    r"([0-9]{4})([0-9]{2})([0-9]{2})000000-([0-9]{2})h-enfo-ef.nc"
+                )
+                synced_dates = {}
+                for fname in data_files:
+                    if bool(r.match(fname)):
+                        parts = r.split(fname)
+                        fdate = f"{parts[1]}{parts[2]}{parts[3]}000000"
+                        if fdate in synced_dates.keys():
+                            synced_dates[fdate].append(int(parts[4]))
+                        else:
+                            synced_dates[fdate] = [int(parts[4])]
+                print("synced_dates --> ", synced_dates)
+                data_dates = list(
+                    sorted(
+                        [
+                            data_date
+                            for data_date in synced_dates.keys()
+                            if list(sorted(synced_dates[data_date]))
+                            == get_relevant_forecast_steps()
+                        ]
+                    )
+                )
+                print("data_dates --> ", data_dates)
+            else:
+                data_dates = sorted(
+                    sorted(set([dfile.split("-")[0] for dfile in data_files]))
+                )
             return list(
                 reversed(
                     [

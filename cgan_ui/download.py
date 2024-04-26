@@ -4,8 +4,7 @@ from os import getenv
 from pathlib import Path
 from typing import Dict
 from argparse import ArgumentParser
-from datetime import datetime, timedelta
-from dask.diagnostics import ProgressBar
+from datetime import datetime
 from ecmwf.opendata import Client
 from ecmwf.opendata.client import Result
 from loguru import logger
@@ -15,6 +14,8 @@ from cgan_ui.utils import (
     get_forecast_data_dates,
     get_ifs_forecast_dates,
     get_cgan_forecast_dates,
+    get_possible_forecast_dates,
+    get_relevant_forecast_steps,
     get_data_sycn_status,
     set_data_sycn_status,
 )
@@ -52,25 +53,6 @@ def read_dataset(file_path: str) -> list[xr.DataArray]:
         return xr.combine_by_coords(arrays, compat="override")
 
 
-def get_possible_forecast_dates(
-    data_date: str | None = None, dateback: int | None = 4
-) -> list[datetime.date]:
-    if data_date is not None:
-        return [datetime.strptime(data_date, "%Y-%m-%d").date()]
-    now = datetime.now()
-    dates = [now.date()]
-    for i in range(1, dateback + 1):
-        new_date = now - timedelta(days=i)
-        dates.append(new_date.date())
-    return dates
-
-
-def get_relevant_forecast_steps(
-    start: int | None = 30, final: int | None = 54, step: int | None = 3
-) -> list[int]:
-    return [step for step in range(start, final + 1, step)]
-
-
 def try_data_download(
     client: Client,
     request: Dict[str, str],
@@ -93,7 +75,7 @@ def try_data_download(
 
 
 def forecast_files_exist(data_date: datetime.date) -> bool:
-    data_dates = get_forecast_data_dates()
+    data_dates = get_forecast_data_dates(check_steps=True)
     return data_date.strftime("%b %d, %Y") in data_dates
 
 
@@ -215,6 +197,7 @@ def syncronize_open_ifs_forecast_data(
 
         # construct data store path
         data_path = get_data_store_path() / source / stream
+        mask_path = get_data_store_path() / "interim" / "EA" / source / stream
 
         # create data directory if it doesn't exist
         if not data_path.exists():
@@ -229,7 +212,7 @@ def syncronize_open_ifs_forecast_data(
         set_data_sycn_status(source="ecmwf", status=1)
 
         for data_date in data_dates:
-            if latest_fdate.date() >= data_date:
+            if latest_fdate.date() >= data_date and not forecast_files_exist(data_date):
                 requests = [
                     {
                         "date": data_date,
@@ -243,7 +226,12 @@ def syncronize_open_ifs_forecast_data(
                     file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
                     target_file = f"{str(data_path)}/{file_name}"
                     if (
-                        not Path(target_file).exists()
+                        (
+                            not Path(target_file).exists()
+                            and not Path(
+                                f"{mask_path}/{file_name.replace('.grib2','.nc')}"
+                            )
+                        )
                         or Path(target_file).stat().st_size / (1024 * 1024)
                         < min_grib2_size
                         or force_download
