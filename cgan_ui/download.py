@@ -212,7 +212,7 @@ def syncronize_open_ifs_forecast_data(
         set_data_sycn_status(source="ecmwf", status=1)
 
         for data_date in data_dates:
-            if latest_fdate.date() >= data_date and not forecast_files_exist(data_date):
+            if latest_fdate.date() >= data_date:
                 requests = [
                     {
                         "date": data_date,
@@ -226,12 +226,7 @@ def syncronize_open_ifs_forecast_data(
                     file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
                     target_file = f"{str(data_path)}/{file_name}"
                     if (
-                        (
-                            not Path(target_file).exists()
-                            and not Path(
-                                f"{mask_path}/{file_name.replace('.grib2','.nc')}"
-                            ).exists()
-                        )
+                        not Path(target_file).exists()
                         or Path(target_file).stat().st_size / (1024 * 1024)
                         < min_grib2_size
                         or force_download
