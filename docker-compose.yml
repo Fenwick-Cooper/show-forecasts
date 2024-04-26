@@ -21,8 +21,6 @@ services:
       - ${CGAN_DATA_STORE:-./data/store}:${DATA_STORE_DIR:-/opt/store}
       - ${MERCURY_STATIC:-./data/static}:${WORK_HOME:-/opt/cgan}/mercury/django_static
       - ${MERCURY_MEDIA:-./data/media}:${WORK_HOME:-/opt/cgan}/mercury/media
-      - ./webapps:${APP_DIR:-/opt/app}/webapps
-      - ./notebooks:${APP_DIR:-/opt/app}/notebooks
 
   jobs:
     image: ${JOBS_IMAGE_NAME:-icpac/cgan-jobs}
