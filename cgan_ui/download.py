@@ -230,7 +230,7 @@ def syncronize_open_ifs_forecast_data(
                             not Path(target_file).exists()
                             and not Path(
                                 f"{mask_path}/{file_name.replace('.grib2','.nc')}"
-                            )
+                            ).exists()
                         )
                         or Path(target_file).stat().st_size / (1024 * 1024)
                         < min_grib2_size
