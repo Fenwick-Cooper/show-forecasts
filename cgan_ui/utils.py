@@ -48,7 +48,7 @@ def get_forecast_data_files(
 
 
 def get_forecast_data_dates(
-    mask: str | None = None, source: str | None = "ecmwf", stream: str | None = "enfo"
+    mask: str | None = "EA", source: str | None = "ecmwf", stream: str | None = "enfo"
 ) -> list[str]:
     data_files = get_forecast_data_files(source=source, stream=stream, mask=mask)
     # extract forecast initialization dates

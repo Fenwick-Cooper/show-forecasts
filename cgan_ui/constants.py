@@ -60,6 +60,19 @@ AOI_BBOX = {
 COLOR_SCHEMES = ["ICPAC", "ICPAC_heavy", "KMD", "EMI", "EMI_heavy", "Default"]
 
 # boundary layers
-REGION_SHAPES = ["ICPAC", "Kenya", "Ethiopia"]
+COUNTRY_NAMES = [
+    "East Africa",
+    "Ethiopia",
+    "Kenya",
+    "Burundi",
+    "Djibouti",
+    "Eritrea",
+    "Rwanda",
+    "Somalia",
+    "South Sudan",
+    "Sudan",
+    "Tanzania",
+    "Uganda",
+]
 
 TP_PLOT_UNITS = ["mm/week", "mm/day", "mm/6h", "mm/h"]

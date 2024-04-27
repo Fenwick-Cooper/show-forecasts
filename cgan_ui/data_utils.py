@@ -3,7 +3,9 @@
 import numpy as np
 from datetime import datetime
 from os import getenv
+from loguru import logger
 import shapefile
+from cgan_ui.constants import COUNTRY_NAMES
 
 
 # Returns the normalisation used to plot
@@ -21,8 +23,9 @@ def get_plot_normalisation(plot_units: str):
     elif plot_units == "mm/week":
         plot_norm = 7 * 24
     else:
-        print(f"ERROR: Unknown plot units {plot_units}")
-        print(f"       Options are 'mm/h', 'mm/6h', 'mm/day', 'mm/week'.")
+        logger.error(
+            f"Unknown plot units {plot_units}. Options are 'mm/h', 'mm/6h', 'mm/day', 'mm/week'."
+        )
         return 1
     return plot_norm
 
@@ -32,47 +35,35 @@ def get_plot_normalisation(plot_units: str):
 #   region='ICPAC' - can be 'ICPAC', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
 #                    'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
 #    border_size   - Area around the region in degrees to include in the plot
-def get_region_extent(region: str, border_size: float | None = 0.5):
-
-    # The countries in the shapefile
-    shapefile_countries = np.array(
-        [
-            "Kenya",
-            "South Sudan",
-            "Rwanda",
-            "Burundi",
-            "Djibouti",
-            "Eritrea",
-            "Ethiopia",
-            "Sudan",
-            "Somalia",
-            "Tanzania",
-            "Kenya2",
-            "Uganda",
-        ]
-    )
-
+def get_region_extent(
+    shape_name: str | None = COUNTRY_NAMES[0], border_size: float | None = 0.5
+):
     # Get the shapefile
     sf = shapefile.Reader(f"{getenv('APP_DIR', './')}/shapefiles/gha.shp")
 
-    # Find the bounding box of the region
-    if region in shapefile_countries:
-        i = int(np.nonzero(shapefile_countries == region)[0])
-        bbox = np.array(sf.shape(i).bbox)
+    # find boundary index
+    if shape_name != COUNTRY_NAMES[0]:
+        shape_index = [
+            index
+            for index in range(len(sf.records()))
+            if sf.record(index).as_dict()["name"] == shape_name
+        ]
+        bbox = None if not len(shape_index) else sf.shape(shape_index[0]).bbox
     else:
-        bbox = np.array(sf.bbox)
-        if region != "ICPAC":
-            print(f"Warning: Region '{region}' is not known")
+        bbox = sf.bbox
 
+    if bbox is None:
+        logger.error(
+            f"Boundary name {shape_name} is not recognized. Should be one of {', '.join(COUNTRY_NAMES)}"
+        )
+        return None
     # The boundary of the region in the form of a cartopy extent
-    country_extent = [
+    return [
         bbox[0] - border_size,
         bbox[2] + border_size,
         bbox[1] - border_size,
         bbox[3] + border_size,
     ]
-
-    return country_extent
 
 
 # Returns the contour levels and colours used for different styles of plot
@@ -213,7 +204,7 @@ def get_contour_levels(style: str):
         ]
 
     else:
-        print(f"ERROR: Unknown style {style}")
+        logger.error(f"Unknown style {style}")
 
     return plot_levels, plot_colours
 
