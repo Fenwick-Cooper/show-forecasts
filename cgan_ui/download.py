@@ -11,7 +11,6 @@ from loguru import logger
 from cgan_ui.utils import (
     get_data_store_path,
     get_forecast_data_files,
-    get_forecast_data_dates,
     get_ifs_forecast_dates,
     get_cgan_forecast_dates,
     get_possible_forecast_dates,
@@ -72,11 +71,6 @@ def try_data_download(
     else:
         logger.info(f"downloaded {result.urls[0]} successfully")
         return result
-
-
-def forecast_files_exist(data_date: datetime.date) -> bool:
-    data_dates = get_forecast_data_dates(check_steps=True)
-    return data_date.strftime("%b %d, %Y") in data_dates
 
 
 def post_process_ecmwf_grib2_dataset(
@@ -224,15 +218,16 @@ def syncronize_open_ifs_forecast_data(
                 grib2_files = []
                 for request in requests:
                     file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
-                    target_file = f"{str(data_path)}/{file_name}"
+                    mask_file = mask_path / file_name.replace(".grib2", ".nc")
+                    target_file = data_path / file_name
                     if (
-                        not Path(target_file).exists()
+                        not (target_file.exists() or mask_file.exists())
                         or Path(target_file).stat().st_size / (1024 * 1024)
                         < min_grib2_size
                         or force_download
                     ):
                         get_url = client._get_urls(
-                            request=request, target=target_file, use_index=False
+                            request=request, target=str(target_file), use_index=False
                         )
                         logger.info(
                             f"trying {model} data download with payload {request} on URL {get_url.urls[0]}"
@@ -241,7 +236,7 @@ def syncronize_open_ifs_forecast_data(
                             result = try_data_download(
                                 client=client,
                                 request=request,
-                                target_file=target_file,
+                                target_file=str(target_file),
                                 model=model,
                             )
                             if result is not None:

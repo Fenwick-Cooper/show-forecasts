@@ -1,4 +1,4 @@
-import os, re
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -48,45 +48,15 @@ def get_forecast_data_files(
 
 
 def get_forecast_data_dates(
-    mask: str | None = None,
-    source: str | None = "ecmwf",
-    stream: str | None = "enfo",
-    check_steps: bool | None = False,
+    mask: str | None = None, source: str | None = "ecmwf", stream: str | None = "enfo"
 ) -> list[str]:
     data_files = get_forecast_data_files(source=source, stream=stream, mask=mask)
     # extract forecast initialization dates
     match source:
         case "ecmwf":
-            # be sure all IFS time steps were synced
-            if check_steps:
-                r = re.compile(
-                    r"([0-9]{4})([0-9]{2})([0-9]{2})000000-([0-9]{2})h-enfo-ef.nc"
-                )
-                synced_dates = {}
-                for fname in data_files:
-                    if bool(r.match(fname)):
-                        parts = r.split(fname)
-                        fdate = f"{parts[1]}{parts[2]}{parts[3]}000000"
-                        if fdate in synced_dates.keys():
-                            synced_dates[fdate].append(int(parts[4]))
-                        else:
-                            synced_dates[fdate] = [int(parts[4])]
-                print("synced_dates --> ", synced_dates)
-                data_dates = list(
-                    sorted(
-                        [
-                            data_date
-                            for data_date in synced_dates.keys()
-                            if list(sorted(synced_dates[data_date]))
-                            == get_relevant_forecast_steps()
-                        ]
-                    )
-                )
-                print("data_dates --> ", data_dates)
-            else:
-                data_dates = sorted(
-                    sorted(set([dfile.split("-")[0] for dfile in data_files]))
-                )
+            data_dates = sorted(
+                sorted(set([dfile.split("-")[0] for dfile in data_files]))
+            )
             return list(
                 reversed(
                     [
