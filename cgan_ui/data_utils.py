@@ -4,8 +4,23 @@ import numpy as np
 from datetime import datetime
 from os import getenv
 from loguru import logger
+import cartopy.io.shapereader as shpreader
 import shapefile
 from cgan_ui.constants import COUNTRY_NAMES
+
+
+def get_shape_boundary(
+    shape_name: str | None = COUNTRY_NAMES[0],
+) -> shpreader.BasicReader:
+    # Get the shapefile
+    try:
+        return shpreader.Reader(
+            f"{getenv('APP_DIR', './')}/shapefiles/{shape_name}.shp"
+        )
+    except Exception:
+        return shpreader.Reader(
+            f"{getenv('APP_DIR', './')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
+        )
 
 
 # Returns the normalisation used to plot
@@ -38,9 +53,12 @@ def get_plot_normalisation(plot_units: str):
 def get_region_extent(
     shape_name: str | None = COUNTRY_NAMES[0], border_size: float | None = 0.5
 ):
-    # Get the shapefile
-    sf = shapefile.Reader(f"{getenv('APP_DIR', './')}/shapefiles/gha.shp")
-
+    try:
+        sf = shapefile.Reader(f"{getenv('APP_DIR', './')}/shapefiles/{shape_name}.shp")
+    except Exception:
+        sf = shapefile.Reader(
+            f"{getenv('APP_DIR', './')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
+        )
     # find boundary index
     if shape_name != COUNTRY_NAMES[0]:
         shape_index = [

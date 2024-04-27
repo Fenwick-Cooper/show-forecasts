@@ -17,9 +17,11 @@ import cartopy.io.shapereader as shpreader
 from cartopy.feature import ShapelyFeature
 from matplotlib import colors  # For consistency with Harris et. al 2022
 import xarray as xr
+from cgan_ui.constants import COUNTRY_NAMES, COLOR_SCHEMES
 from cgan_ui.data_utils import (
     get_contour_levels,
     get_plot_normalisation,
+    get_shape_boundary,
     get_region_extent,
     datetime64_to_datetime,
 )
@@ -51,9 +53,9 @@ def plot_GAN_forecast(
     data: xr.Dataset,
     lon_dim: str | None = "longitude",
     lat_dim: str | None = "latitude",
-    style: str | None = "ICPAC",
+    style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = "mm/h",
-    region: str | None = "ICPAC",
+    region: str | None = COUNTRY_NAMES[0],
 ):
 
     # Get the units to use for plotting
@@ -67,13 +69,13 @@ def plot_GAN_forecast(
         plot_levels, plot_colours = get_contour_levels(style)
 
     # Load the border shapefile
-    reader = shpreader.Reader(f"{getenv('APP_DIR','./')}/shapefiles/gha.shp")
+    reader = get_shape_boundary(shape_name=region)
     shape_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
 
     # Get the extent of the region that we are looking at
-    if region != "ICPAC":
+    if region != COUNTRY_NAMES[0]:
         region_extent = get_region_extent(region, border_size=0.5)
 
     # There are plots for each valid time
@@ -132,7 +134,7 @@ def plot_GAN_forecast(
             cb = plt.colorbar(
                 c, fraction=0.04, ticks=plot_levels * plot_norm
             )  # Add a colorbar with a nice size
-        if region != "ICPAC":
+        if region != COUNTRY_NAMES[0]:
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
         ax.set_title(f"Ensemble mean", size=14)  # This plot's title
@@ -178,7 +180,7 @@ def plot_GAN_forecast(
             cb = plt.colorbar(
                 c, fraction=0.04, ticks=plot_levels * plot_norm
             )  # Add a colorbar with a nice size
-        if region != "ICPAC":
+        if region != COUNTRY_NAMES[0]:
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
         ax.set_title(f"Ensemble standard deviation", size=14)  # This plot's title
@@ -203,9 +205,9 @@ def plot_GAN_ensemble(
     valid_time_start_hour: int,
     lon_dim: str | None = "longitude",
     lat_dim: str | None = "latitude",
-    style: str | None = "ICPAC",
+    style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = "mm/h",
-    region: str | None = "ICPAC",
+    region: str | None = COUNTRY_NAMES[0],
 ):
 
     # Get the units to use for plotting
@@ -219,13 +221,13 @@ def plot_GAN_ensemble(
         plot_levels, plot_colours = get_contour_levels(style)
 
     # Load the border shapefile
-    reader = shpreader.Reader(f"{getenv('APP_DIR','./')}/shapefiles/gha.shp")
+    reader = get_shape_boundary(shape_name=region)
     shape_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
 
     # Get the extent of the region that we are looking at
-    if region != "ICPAC":
+    if region != COUNTRY_NAMES[0]:
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Change valid_time_start_hour into the valid_time_idx
@@ -292,7 +294,7 @@ def plot_GAN_ensemble(
                 levels=plot_levels * plot_norm,
                 transform=ccrs.PlateCarree(),
             )
-        if region != "ICPAC":
+        if region != COUNTRY_NAMES[0]:
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         ax.set_title(f"{ax_idx+1}", size=14)  # This plot's title
 

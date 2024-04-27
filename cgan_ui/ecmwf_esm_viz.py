@@ -11,17 +11,23 @@
 import numpy as np
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
-import cartopy.io.shapereader as shpreader
 from os import getenv
 from cartopy.feature import ShapelyFeature
 from matplotlib import colors  # For consistency with Harris et. al 2022
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import xarray as xr
-from cgan_ui.constants import DATA_PARAMS, LEAD_START_HOUR, LEAD_END_HOUR
+from cgan_ui.constants import (
+    DATA_PARAMS,
+    LEAD_START_HOUR,
+    LEAD_END_HOUR,
+    COUNTRY_NAMES,
+    COLOR_SCHEMES,
+)
 from cgan_ui.data_utils import (
     get_contour_levels,
     get_plot_normalisation,
+    get_shape_boundary,
     get_region_extent,
     datetime64_to_datetime,
 )
@@ -120,9 +126,9 @@ def plot_forecast(
     data: xr.DataArray,
     lon_dim: str | None = "lon",
     lat_dim: str | None = "lat",
-    style: str | None = None,
+    style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = None,
-    region: str | None = "ICPAC",
+    region: str | None = COUNTRY_NAMES[0],
 ):
 
     if data.name == "tp":
@@ -163,13 +169,13 @@ def plot_forecast(
             print("Warning: Styles are only available for total precipitation")
 
     # Load the border shapefile
-    reader = shpreader.Reader(f"{getenv('APP_DIR', './')}/shapefiles/gha.shp")
+    reader = get_shape_boundary(shape_name=region)
     shape_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
 
     # Get the extent of the region that we are looking at
-    if region != "ICPAC":
+    if region != COUNTRY_NAMES[0]:
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Define the figure and each axis for the rows and columns
@@ -223,7 +229,7 @@ def plot_forecast(
             levels=plot_levels * plot_norm * 24,
             transform=ccrs.PlateCarree(),
         )
-    if region != "ICPAC":
+    if region != COUNTRY_NAMES[0]:
         ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
     cb.set_label(plot_units)  # Label the colorbar
@@ -269,7 +275,7 @@ def plot_forecast(
             levels=plot_levels * plot_norm * 24,
             transform=ccrs.PlateCarree(),
         )
-    if region != "ICPAC":
+    if region != COUNTRY_NAMES[0]:
         ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
     cb.set_label(plot_units)  # Label the colorbar
@@ -286,9 +292,9 @@ def plot_forecast_ensemble(
     data: xr.DataArray,
     lon_dim: str | None = "lon",
     lat_dim: str | None = "lat",
-    style: str | None = None,
+    style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = None,
-    region: str | None = "ICPAC",
+    region: str | None = COUNTRY_NAMES[0],
 ):
 
     if data.name == "tp":
@@ -329,13 +335,13 @@ def plot_forecast_ensemble(
             print("Warning: Styles are only available for total precipitation")
 
     # Load the border shapefile
-    reader = shpreader.Reader(f"{getenv('APP_DIR', './')}/shapefiles/gha.shp")
+    reader = get_shape_boundary(shape_name=region)
     shape_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
 
     # Get the extent of the region that we are looking at
-    if region != "ICPAC":
+    if region != COUNTRY_NAMES[0]:
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Convert the forecast valid time to a datetime.datetime format
@@ -396,7 +402,7 @@ def plot_forecast_ensemble(
                 levels=plot_levels * plot_norm * 24,
                 transform=ccrs.PlateCarree(),
             )
-        if region != "ICPAC":
+        if region != COUNTRY_NAMES[0]:
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         ax.set_title(f"{ax_idx+1}", size=14)  # This plot's title
 
@@ -418,69 +424,3 @@ def plot_forecast_ensemble(
         f"IFS ensemble: Valid {valid_time} - {valid_time + timedelta(days=1)}"
     )  # Overall title
     plt.show()  # Finally draw the plot
-
-
-# Plot the ensemble mean and ensemble standard deviation of the forecast data
-# def plot_forecast(
-#     data: xr.DataArray, lon_dim: str | None = "lon", lat_dim: str | None = "lat"
-# ):
-
-#     # Define the figure and each axis for the rows and columns
-#     fig, axs = plt.subplots(
-#         nrows=1, ncols=2, subplot_kw={"projection": ccrs.PlateCarree()}, figsize=(10, 5)
-#     )
-
-#     # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
-#     axs = axs.flatten()
-
-#     ax = axs[0]  # First plot (left)
-#     ax.add_feature(
-#         cfeature.COASTLINE, linewidth=1
-#     )  # Draw some features to see where we are
-#     ax.add_feature(cfeature.BORDERS, linewidth=1)
-#     ax.add_feature(
-#         cfeature.LAKES,
-#         linewidth=1,
-#         linestyle="-",
-#         edgecolor="dimgrey",
-#         facecolor="none",
-#     )
-#     # Actually make the plot
-#     c = ax.pcolormesh(
-#         data[lon_dim],
-#         data[lat_dim],
-#         np.mean(data, axis=0),
-#         cmap="YlGnBu",
-#         transform=ccrs.PlateCarree(),
-#     )
-#     cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
-#     cb.set_label(data.attrs["units"])  # Label the colorbar
-#     ax.set_title(f"Ensemble mean", size=14)  # This plot's title
-
-#     ax = axs[1]  # Second plot (right)
-#     ax.add_feature(
-#         cfeature.COASTLINE, linewidth=1
-#     )  # Draw some features to see where we are
-#     ax.add_feature(cfeature.BORDERS, linewidth=1)
-#     ax.add_feature(
-#         cfeature.LAKES,
-#         linewidth=1,
-#         linestyle="-",
-#         edgecolor="dimgrey",
-#         facecolor="none",
-#     )
-#     # Actually make the plot
-#     c = ax.pcolormesh(
-#         data[lon_dim],
-#         data[lat_dim],
-#         np.std(data, axis=0, ddof=1),
-#         cmap="YlGnBu",
-#         transform=ccrs.PlateCarree(),
-#     )
-#     cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
-#     cb.set_label(data.attrs["units"])  # Label the colorbar
-#     ax.set_title(f"Ensemble standard deviation", size=14)  # This plot's title
-
-#     fig.suptitle(data.attrs["name"])  # Overall title
-#     plt.tight_layout()  # Looks nicer
-#     plt.show()  # Finally draw the plot
