@@ -296,9 +296,9 @@ def plot_GAN_ensemble(data, valid_time_start_hour, style=None, plot_units='mm/h'
 
     # Add a final colorbar with a nice size
     if (style == None):
-        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.4, pad=0.01) 
+        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.6, pad=0.01) 
     else:
-        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.4, pad=0.01, ticks=plot_levels*plot_norm) 
+        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.6, pad=0.01, ticks=plot_levels*plot_norm) 
     cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
 
     fig.suptitle(f"Jurre Brishti cGAN ensemble: Valid {valid_time} - {valid_time + timedelta(hours=6)}")  # Overall title

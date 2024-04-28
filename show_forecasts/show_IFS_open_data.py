@@ -421,9 +421,9 @@ def plot_forecast_ensemble(data, style=None, plot_units=None, region='ICPAC'):
 
     # Add a final colorbar with a nice size
     if (style == None):
-        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.4, pad=0.01) 
+        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.6, pad=0.01) 
     else:
-        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.4, pad=0.01, ticks=plot_levels*plot_norm*24) 
+        cb = fig.colorbar(c, ax=axs, location='bottom', shrink=0.6, pad=0.01, ticks=plot_levels*plot_norm*24) 
     cb.set_label(plot_units)  # Label the colorbar
 
     fig.suptitle(f"IFS ensemble: Valid {valid_time} - {valid_time + timedelta(days=1)}")  # Overall title
