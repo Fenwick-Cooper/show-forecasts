@@ -176,6 +176,7 @@ def syncronize_open_ifs_forecast_data(
     re_try_times: int | None = 10,
     force_download: bool | None = False,
     min_grib2_size: float | None = 4.1 * 1024,
+    min_nc_size: float | None = 360 * 1024,
 ) -> None:
     logger.info(
         f"recived IFS open forecast data syncronization job at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -220,10 +221,20 @@ def syncronize_open_ifs_forecast_data(
                     file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
                     mask_file = mask_path / file_name.replace(".grib2", ".nc")
                     target_file = data_path / file_name
+                    target_size = (
+                        0
+                        if not target_file.exists()
+                        else target_file.stat().st_size / (1024 * 1024)
+                    )
+                    mask_size = (
+                        0
+                        if not mask_file.exists()
+                        else mask_file.stat().st_size / (1024 * 1024)
+                    )
                     if (
                         not (target_file.exists() or mask_file.exists())
-                        or Path(target_file).stat().st_size / (1024 * 1024)
-                        < min_grib2_size
+                        or target_size < min_grib2_size
+                        or mask_size < min_nc_size
                         or force_download
                     ):
                         get_url = client._get_urls(
