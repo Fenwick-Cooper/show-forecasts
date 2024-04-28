@@ -3,7 +3,6 @@
 # To do:
 #   Change "mm h**-1" to "mm/h" in the data.
 #   Store the model name in the data.
-#   Add 24h plot or select time index.
 #   Check time zone and make label.
 
 import numpy as np
@@ -55,11 +54,16 @@ def plot_GAN_forecast(data, style=None, plot_units='mm/h', region='ICPAC'):
         plot_levels, plot_colours = get_contour_levels(style)
     
     # Load the border shapefile
-    reader = shpreader.Reader("show_forecasts/GHA_shapes/gha.shp")
-    shape_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+    reader = shpreader.Reader("show_forecasts/shapes/GHA_shapes/gha.shp")
+    borders_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
     
-    # Get the extent of the region that we are looking at
     if (region != 'ICPAC'):
+        
+        # Load the regions shapefile
+        reader = shpreader.Reader(f"show_forecasts/shapes/{region}_shapes/{region}_region.cpg")
+        regions_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+        
+        # Get the extent of the region that we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
     
     # There are plots for each valid time
@@ -76,7 +80,11 @@ def plot_GAN_forecast(data, style=None, plot_units='mm/h', region='ICPAC'):
 
         ax=axs[0]  # First plot (left)
         ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
-        ax.add_feature(shape_feature)  # The borders
+        if (region != 'ICPAC'):
+            if (region != 'Uganda'):  # Uganda counties are too complicated
+                ax.add_feature(regions_feature, linestyle=':')
+            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+        ax.add_feature(borders_feature)  # The borders
         ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
         # Actually make the plot
         if (style == None):
@@ -89,14 +97,16 @@ def plot_GAN_forecast(data, style=None, plot_units='mm/h', region='ICPAC'):
                             np.mean(data['precipitation'][0,:,valid_time_idx,:,:], axis=0) * plot_norm,
                             colors=plot_colours, levels=plot_levels*plot_norm, transform=ccrs.PlateCarree())
             cb = plt.colorbar(c, fraction=0.04, ticks=plot_levels*plot_norm)  # Add a colorbar with a nice size
-        if (region != 'ICPAC'):
-            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
         ax.set_title(f"Ensemble mean",size=14)  # This plot's title
 
         ax=axs[1]  # Second plot (right)
         ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
-        ax.add_feature(shape_feature)  # The borders
+        if (region != 'ICPAC'):
+            if (region != 'Uganda'):  # Uganda counties are too complicated
+                ax.add_feature(regions_feature, linestyle=':')
+            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+        ax.add_feature(borders_feature)  # The borders
         ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
         # Actually make the plot
         if (style == None):
@@ -109,8 +119,6 @@ def plot_GAN_forecast(data, style=None, plot_units='mm/h', region='ICPAC'):
                             np.std(data['precipitation'][0,:,valid_time_idx,:,:], axis=0, ddof=1) * plot_norm,
                             colors=plot_colours, levels=plot_levels*plot_norm, transform=ccrs.PlateCarree())
             cb = plt.colorbar(c, fraction=0.04, ticks=plot_levels*plot_norm)  # Add a colorbar with a nice size
-        if (region != 'ICPAC'):
-            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
         ax.set_title(f"Ensemble standard deviation",size=14)  # This plot's title
 
@@ -140,11 +148,16 @@ def plot_GAN_forecast_24h(data, style=None, plot_units='mm/h', region='ICPAC'):
         plot_levels, plot_colours = get_contour_levels(style)
     
     # Load the border shapefile
-    reader = shpreader.Reader("show_forecasts/GHA_shapes/gha.shp")
-    shape_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+    reader = shpreader.Reader("show_forecasts/shapes/GHA_shapes/gha.shp")
+    borders_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
     
-    # Get the extent of the region that we are looking at
     if (region != 'ICPAC'):
+                
+        # Load the regions shapefile
+        reader = shpreader.Reader(f"show_forecasts/shapes/{region}_shapes/{region}_region.cpg")
+        regions_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+        
+        # Get the extent of the region that we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Convert the forecast valid time to a datetime.datetime format
@@ -158,7 +171,11 @@ def plot_GAN_forecast_24h(data, style=None, plot_units='mm/h', region='ICPAC'):
 
     ax=axs[0]  # First plot (left)
     ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
-    ax.add_feature(shape_feature)  # The borders
+    if (region != 'ICPAC'):
+        if (region != 'Uganda'):  # Uganda counties are too complicated
+            ax.add_feature(regions_feature, linestyle=':')
+        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+    ax.add_feature(borders_feature)  # The borders
     ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
     # Actually make the plot
     if (style == None):
@@ -171,14 +188,16 @@ def plot_GAN_forecast_24h(data, style=None, plot_units='mm/h', region='ICPAC'):
                         np.mean(data['precipitation'][0,:,:,:,:], axis=(0,1)) * plot_norm,
                         colors=plot_colours, levels=plot_levels*plot_norm, transform=ccrs.PlateCarree())
         cb = plt.colorbar(c, fraction=0.04, ticks=plot_levels*plot_norm)  # Add a colorbar with a nice size
-    if (region != 'ICPAC'):
-        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
     ax.set_title(f"Ensemble mean",size=14)  # This plot's title
 
     ax=axs[1]  # Second plot (right)
     ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
-    ax.add_feature(shape_feature)  # The borders
+    if (region != 'ICPAC'):
+        if (region != 'Uganda'):  # Uganda counties are too complicated
+            ax.add_feature(regions_feature, linestyle=':')
+        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+    ax.add_feature(borders_feature)  # The borders
     ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
     # Actually make the plot
     if (style == None):
@@ -191,8 +210,6 @@ def plot_GAN_forecast_24h(data, style=None, plot_units='mm/h', region='ICPAC'):
                         np.sqrt(np.mean(np.var(data['precipitation'][0,:,:,:,:], axis=0, ddof=1), axis=0)) * plot_norm,
                         colors=plot_colours, levels=plot_levels*plot_norm, transform=ccrs.PlateCarree())
         cb = plt.colorbar(c, fraction=0.04, ticks=plot_levels*plot_norm)  # Add a colorbar with a nice size
-    if (region != 'ICPAC'):
-        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
     ax.set_title(f"Ensemble standard deviation",size=14)  # This plot's title
 
@@ -222,11 +239,16 @@ def plot_GAN_ensemble(data, valid_time_start_hour, style=None, plot_units='mm/h'
         plot_levels, plot_colours = get_contour_levels(style)
 
     # Load the border shapefile
-    reader = shpreader.Reader("show_forecasts/GHA_shapes/gha.shp")
-    shape_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+    reader = shpreader.Reader("show_forecasts/shapes/GHA_shapes/gha.shp")
+    borders_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
     
-    # Get the extent of the region that we are looking at
     if (region != 'ICPAC'):
+        
+        # Load the regions shapefile
+        reader = shpreader.Reader(f"show_forecasts/shapes/{region}_shapes/{region}_region.cpg")
+        regions_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+        
+        # Get the extent of the region that we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
     
     # Change valid_time_start_hour into the valid_time_idx
@@ -257,7 +279,11 @@ def plot_GAN_ensemble(data, valid_time_start_hour, style=None, plot_units='mm/h'
 
         ax=axs[ax_idx]  # First plot (left)
         ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
-        ax.add_feature(shape_feature)  # The borders
+        if (region != 'ICPAC'):
+            if (region != 'Uganda'):  # Uganda counties are too complicated
+                ax.add_feature(regions_feature, linestyle=':')
+            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+        ax.add_feature(borders_feature)  # The borders
         ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
         # Actually make the plot
         if (style == None):
@@ -266,8 +292,6 @@ def plot_GAN_ensemble(data, valid_time_start_hour, style=None, plot_units='mm/h'
         else:
             c = ax.contourf(data['longitude'], data['latitude'], data['precipitation'][0,ax_idx,valid_time_idx,:,:] * plot_norm,
                             colors=plot_colours, levels=plot_levels*plot_norm, transform=ccrs.PlateCarree())
-        if (region != 'ICPAC'):
-            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         ax.set_title(f"{ax_idx+1}",size=14)  # This plot's title
 
     # Add a final colorbar with a nice size

@@ -3,11 +3,8 @@
 # To do:
 #    Option to specify forecast lead times
 #       In particular specify 7 and 14 day forecasts
-#    Arbitrary region specification
 #    Plot relative humidity
 #       Requires interpolating in the vertical to the correct surface pressure
-#    Plot ensemble members
-#    Runoff colour scale is not the best
 
 import numpy as np
 import cartopy.feature as cfeature
@@ -61,8 +58,8 @@ var_info = {
     },
     'ro' : {
         'name': 'Surface runoff water',
-        'units': 'm',
-        'normalisation': 1,
+        'units': 'cm',
+        'normalisation': 0.01,  # Convert from m to cm
         'offset': 0,
         'accumulated': False,
     },
@@ -268,11 +265,16 @@ def plot_forecast(data, style=None, plot_units=None, region='ICPAC'):
             print("Warning: Styles are only available for total precipitation")
     
     # Load the border shapefile
-    reader = shpreader.Reader("show_forecasts/GHA_shapes/gha.shp")
+    reader = shpreader.Reader("show_forecasts/shapes/GHA_shapes/gha.shp")
     shape_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
     
-    # Get the extent of the region that we are looking at
     if (region != 'ICPAC'):
+        
+        # Load the regions shapefile
+        reader = shpreader.Reader(f"show_forecasts/shapes/{region}_shapes/{region}_region.cpg")
+        regions_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+        
+        # Get the extent of the region that we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
     
     # Define the figure and each axis for the rows and columns
@@ -286,6 +288,10 @@ def plot_forecast(data, style=None, plot_units=None, region='ICPAC'):
     
     ax=axs[0]  # First plot (left)
     ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
+    if (region != 'ICPAC'):
+        if (region != 'Uganda'):  # Uganda counties are too complicated
+            ax.add_feature(regions_feature, linestyle=':')
+        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     ax.add_feature(shape_feature)  # The borders
     ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
     # Actually make the plot
@@ -299,14 +305,16 @@ def plot_forecast(data, style=None, plot_units=None, region='ICPAC'):
     else:
         c = ax.contourf(data['longitude'], data['latitude'], np.mean(data, axis=0) * plot_norm,
                         colors=plot_colours, levels=plot_levels*plot_norm*24, transform=ccrs.PlateCarree())
-    if (region != 'ICPAC'):
-        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
     cb.set_label(plot_units)  # Label the colorbar
     ax.set_title(f"Ensemble mean",size=14)  # This plot's title
 
     ax=axs[1]  # Second plot (right)
     ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
+    if (region != 'ICPAC'):
+        if (region != 'Uganda'):  # Uganda counties are too complicated
+            ax.add_feature(regions_feature, linestyle=':')
+        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     ax.add_feature(shape_feature)  # The borders
     ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
     # Actually make the plot
@@ -320,8 +328,6 @@ def plot_forecast(data, style=None, plot_units=None, region='ICPAC'):
     else:
         c = ax.contourf(data['longitude'], data['latitude'], np.std(data, axis=0) * plot_norm,
                         colors=plot_colours, levels=plot_levels*plot_norm*24, transform=ccrs.PlateCarree())
-    if (region != 'ICPAC'):
-        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
     cb.set_label(plot_units)  # Label the colorbar
     ax.set_title(f"Ensemble standard deviation",size=14)  # This plot's title
@@ -367,11 +373,16 @@ def plot_forecast_ensemble(data, style=None, plot_units=None, region='ICPAC'):
             print("Warning: Styles are only available for total precipitation")
 
     # Load the border shapefile
-    reader = shpreader.Reader("show_forecasts/GHA_shapes/gha.shp")
+    reader = shpreader.Reader("show_forecasts/shapes/GHA_shapes/gha.shp")
     shape_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
     
-    # Get the extent of the region that we are looking at
     if (region != 'ICPAC'):
+        
+        # Load the regions shapefile
+        reader = shpreader.Reader(f"show_forecasts/shapes/{region}_shapes/{region}_region.cpg")
+        regions_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+        
+        # Get the extent of the region that we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
     
     # Convert the forecast valid time to a datetime.datetime format
@@ -389,6 +400,10 @@ def plot_forecast_ensemble(data, style=None, plot_units=None, region='ICPAC'):
 
         ax=axs[ax_idx]  # First plot (left)
         ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
+        if (region != 'ICPAC'):
+            if (region != 'Uganda'):  # Uganda counties are too complicated
+                ax.add_feature(regions_feature, linestyle=':')
+            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         ax.add_feature(shape_feature)  # The borders
         ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
         # Actually make the plot
@@ -402,8 +417,6 @@ def plot_forecast_ensemble(data, style=None, plot_units=None, region='ICPAC'):
         else:
             c = ax.contourf(data['longitude'], data['latitude'], data[ax_idx,:,:] * plot_norm,
                             colors=plot_colours, levels=plot_levels*plot_norm*24, transform=ccrs.PlateCarree())
-        if (region != 'ICPAC'):
-            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         ax.set_title(f"{ax_idx+1}",size=14)  # This plot's title
 
     # Add a final colorbar with a nice size

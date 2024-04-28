@@ -38,7 +38,7 @@ def get_region_extent(region, border_size=0.5):
                                     'Ethiopia','Sudan','Somalia','Tanzania','Kenya2','Uganda',])
 
     # Get the shapefile
-    sf = shapefile.Reader("show_forecasts/GHA_shapes/gha.shp")
+    sf = shapefile.Reader("show_forecasts/shapes/GHA_shapes/gha.shp")
 
     # Find the bounding box of the region
     if (region in shapefile_countries):
