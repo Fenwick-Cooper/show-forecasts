@@ -69,6 +69,7 @@ def try_data_download(
         )
         return None
     else:
+        Path(target_file).unlink(missing_ok=True)
         logger.info(f"downloaded {result.urls[0]} successfully")
         return result
 
@@ -176,7 +177,7 @@ def syncronize_open_ifs_forecast_data(
     re_try_times: int | None = 10,
     force_download: bool | None = False,
     min_grib2_size: float | None = 4.1 * 1024,
-    min_nc_size: float | None = 360 * 1024,
+    min_nc_size: float | None = 360,
 ) -> None:
     logger.info(
         f"recived IFS open forecast data syncronization job at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -197,6 +198,10 @@ def syncronize_open_ifs_forecast_data(
         # create data directory if it doesn't exist
         if not data_path.exists():
             data_path.mkdir(parents=True, exist_ok=True)
+
+        # create data directory if it doesn't exist
+        if not mask_path.exists():
+            mask_path.mkdir(parents=True, exist_ok=True)
 
         # create data download client
         client = Client(source=source, model=model, resol=resolution)
