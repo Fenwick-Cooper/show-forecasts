@@ -67,9 +67,9 @@ def try_data_download(
         logger.error(
             f"failed to download {model} forecast data for {request['date']} with error {err}"
         )
+        Path(target_file).unlink(missing_ok=True)
         return None
     else:
-        Path(target_file).unlink(missing_ok=True)
         logger.info(f"downloaded {result.urls[0]} successfully")
         return result
 
