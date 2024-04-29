@@ -238,8 +238,7 @@ def syncronize_open_ifs_forecast_data(
                     )
                     if (
                         not (target_file.exists() or mask_file.exists())
-                        or target_size < min_grib2_size
-                        or mask_size < min_nc_size
+                        or not (target_size < min_grib2_size or mask_size < min_nc_size)
                         or force_download
                     ):
                         get_url = client._get_urls(
@@ -256,6 +255,7 @@ def syncronize_open_ifs_forecast_data(
                                 model=model,
                             )
                             if result is not None:
+                                grib2_files.append(file_name)
                                 logger.info(
                                     f"dataset for {model} forecast, {request['step']}h step, {result.datetime} successfully downloaded"
                                 )
@@ -264,7 +264,6 @@ def syncronize_open_ifs_forecast_data(
                         logger.warning(
                             f"data download job for {request['step']}h {data_date} not executed because the file exist. Pass force_download=True to re-download the files"
                         )
-                    grib2_files.append(file_name)
                 for grib2_file in grib2_files:
                     post_process_ecmwf_grib2_dataset(
                         source=source, stream=stream, grib2_file_name=grib2_file
