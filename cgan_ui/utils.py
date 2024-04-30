@@ -1,12 +1,11 @@
 import os
+import xarray as xr
 from datetime import datetime, timedelta
 from pathlib import Path
-
-from cgan_ui.constants import LEAD_START_HOUR, LEAD_END_HOUR, DATA_PARAMS
-
-
-def get_data_store_path() -> Path:
-    return Path(os.getenv("DATA_STORE_DIR", str(Path("./store")))).absolute()
+from loguru import logger
+from cgan_ui.enums import DataSourceIdentifier
+from cgan_ui.data_utils import get_region_extent
+from cgan_ui.constants import LEAD_START_HOUR, LEAD_END_HOUR, DATA_PARAMS, COUNTRY_NAMES
 
 
 def get_possible_forecast_dates(
@@ -28,70 +27,160 @@ def get_relevant_forecast_steps(
     return [step for step in range(start, final + 1, step)]
 
 
-def get_forecast_data_files(
-    mask: str | None = None, source: str | None = "ecmwf", stream: str | None = "enfo"
-) -> list[str]:
-    store_path = get_data_store_path()
-    match source:
-        case "ecmwf":
-            data_dir = (
-                store_path / source / stream
-                if mask is None
-                else store_path / "interim" / mask / source / stream
-            )
-            return [str(dfile).split("/")[-1] for dfile in data_dir.iterdir()]
-        case "cgan":
-            data_dir = store_path / "GAN_forecasts"
-            return [str(dfile).split("/")[-1] for dfile in data_dir.iterdir()]
-        case _:
-            return []
+# data directory structure
+# store -> source (ecmwf, gbmc, cgan, jobs)
+# for ecmwf, gbmc, cgan; branches to region/year/month/file_name
+# for jobs; subdirectories include downloads, grib2, gbmc
+def get_data_store_path(source: str, mask_region: str | None = None) -> Path:
+    store = Path(os.getenv("DATA_STORE_DIR", str(Path("./store")))).absolute()
+
+    data_dir_path = (
+        store / source if mask_region is None else store / source / mask_region
+    )
+
+    # create directory tree
+    if not data_dir_path.exists():
+        data_dir_path.mkdir(parents=True)
+
+    return data_dir_path
 
 
-def get_forecast_data_dates(
-    mask: str | None = "EA", source: str | None = "ecmwf", stream: str | None = "enfo"
-) -> list[str]:
-    data_files = get_forecast_data_files(source=source, stream=stream, mask=mask)
-    # extract forecast initialization dates
-    match source:
-        case "ecmwf":
-            data_dates = sorted(
-                sorted(set([dfile.split("-")[0] for dfile in data_files]))
-            )
-            return list(
-                reversed(
-                    [
-                        datetime.strptime(dt, "%Y%m%d%H%M%S").strftime("%b %d, %Y")
-                        for dt in data_dates
-                    ]
+def get_dataset_file_path(
+    source: str, data_date: datetime, file_name: str, mask_region: str | None = None
+) -> Path:
+    store_path = (
+        get_data_store_path(source=source, mask_region=mask_region)
+        / str(data_date.year)
+        / f"{str(data_date.month).rjust(2, '0')}"
+    )
+
+    # create directory tree
+    if not store_path.exists():
+        store_path.mkdir(parents=True)
+
+    mask_code = "" if mask_region is None else mask_region.replace(" ", "_").lower()
+    source_code = DataSourceIdentifier[source].value
+
+    return store_path / f"{mask_code}-{source_code}-{file_name}"
+
+
+# recursive function that calls itself until all directories in data_path are traversed
+def get_directory_files(data_path: Path, files: list[Path] | None = []) -> list[Path]:
+    for item in data_path.iterdir():
+        if item.is_file():
+            files.append(item)
+        elif item.is_dir():
+            files.extend(get_directory_files(data_path=item, files=files))
+    return files
+
+
+def get_forecast_data_files(mask_region: str, source: str) -> list[str]:
+    store_path = get_data_store_path(source=source, mask_region=mask_region)
+    data_files = get_directory_files(data_path=store_path, files=[])
+    return [str(dfile).split("/")[-1] for dfile in data_files]
+
+
+def get_forecast_data_dates(mask_region: str, source: str) -> list[str]:
+    data_files = get_forecast_data_files(source=source, mask_region=mask_region)
+    data_dates = sorted(
+        set(
+            [
+                dfile.replace(".nc", "").split("-")[2].split("_")[0]
+                for dfile in data_files
+            ]
+        )
+    )
+    return list(
+        reversed(
+            [
+                datetime.strptime(data_date.replace("000000", ""), "%Y%m%d").strftime(
+                    "%b %d, %Y"
                 )
-            )
+                for data_date in data_dates
+            ]
+        )
+    )
+
+
+def standardize_dataset(d: xr.DataArray | xr.Dataset):
+    if "x" in d.dims and "y" in d.dims:
+        d = d.rename({"x": "longitude", "y": "longitude"})
+    if "lon" in d.dims and "lat" in d.dims:
+        d = d.rename({"lon": "longitude", "lat": "latitude"})
+    return d
+
+
+def slice_dataset_by_bbox(ds: xr.Dataset, bbox: list[float]):
+    ds = ds.sel(longitude=slice(bbox[0], bbox[1]))
+    if ds.latitude.values[0] < ds.latitude.values[-1]:
+        ds = ds.sel(latitude=slice(bbox[2], bbox[3]))
+    else:
+        ds = ds.sel(latitude=slice(bbox[3], bbox[2]))
+    return ds
+
+
+# migrate dataset files from initial filesystem structure to revised.
+def migrate_files(source: str):
+    store = Path(os.getenv("DATA_STORE_DIR", str(Path("./store")))).absolute()
+    match source:
+        case "gbmc":
+            data_dir = store / "IFS"
+            part_to_replace = "IFS_"
         case "cgan":
-            return list(
-                reversed(
-                    [
-                        datetime.strptime(dfile, "GAN_%Y%m%d.nc").strftime("%b %d, %Y")
-                        for dfile in sorted(data_files)
-                    ]
+            data_dir = store / "GAN_forecasts"
+            part_to_replace = "GAN_"
+        case "ecmwf":
+            data_dir = store / "interim" / "EA" / "ecmwf" / "enfo"
+            part_to_replace = ""
+    data_files = [fpath for fpath in data_dir.iterdir() if fpath.name.endswith(".nc")]
+    logger.info(
+        f"processing file-structure migration for {len(data_files)} {source} data files"
+    )
+    # copy data_files to new files path
+    for dfile in data_files:
+        ds = standardize_dataset(xr.open_dataset(dfile, decode_times=False))
+        fname = dfile.name.replace(part_to_replace, "")
+        data_date = datetime.strptime(
+            fname.replace(".nc", "").split("-")[0].split("_")[0].replace("000000", ""),
+            "%Y%m%d",
+        )
+        target_file = get_dataset_file_path(
+            source=source,
+            data_date=data_date,
+            file_name=fname,
+            mask_region="East Africa",
+        )
+        logger.debug(f"migrating dataset file {dfile} to {target_file}")
+        try:
+            ds.to_netcdf(target_file, mode="w", format="NETCDF4")
+        except Exception as error:
+            logger.error(f"failed to save {target_file} with error {error}")
+        else:
+            logger.debug(f"succeefully migrated dataset file {dfile}")
+            for country_name in COUNTRY_NAMES[1:]:
+                # create country slices
+                slice = standardize_dataset(
+                    slice_dataset_by_bbox(
+                        ds=ds, bbox=get_region_extent(shape_name=country_name)
+                    )
                 )
-            )
-        case _:
-            return []
-
-
-def get_ifs_forecast_dates():
-    ifs_dir = get_data_store_path() / "IFS"
-    if not ifs_dir.exists():
-        ifs_dir.mkdir(parents=True)
-    ifs_files = [fpath.name for fpath in ifs_dir.iterdir()]
-    return [datetime.strptime(fname, "IFS_%Y%m%d_00Z.nc") for fname in ifs_files]
-
-
-def get_cgan_forecast_dates():
-    cgan_dir = get_data_store_path() / "GAN_forecasts"
-    if not cgan_dir.exists():
-        cgan_dir.mkdir(parents=True)
-    gan_files = [fpath.name for fpath in cgan_dir.iterdir()]
-    return [datetime.strptime(fname, "GAN_%Y%m%d.nc") for fname in gan_files]
+                slice_target = get_dataset_file_path(
+                    source=source,
+                    data_date=data_date,
+                    file_name=fname,
+                    mask_region=country_name,
+                )
+                logger.debug(
+                    f"migrating dataset slice for {country_name} to {slice_target}"
+                )
+                try:
+                    slice.to_netcdf(slice_target, mode="w", format="NETCDF4")
+                except Exception as error:
+                    logger.error(f"failed to save {slice_target} with error {error}")
+                else:
+                    logger.debug(
+                        f"succeefully migrated dataset slice for {country_name}"
+                    )
 
 
 def set_data_sycn_status(source: str | None = "ecmwf", status: int | None = 1):
