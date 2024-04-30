@@ -10,37 +10,22 @@ from ecmwf.opendata.client import Result
 from loguru import logger
 from cgan_ui.utils import (
     get_data_store_path,
-    get_forecast_data_files,
-    get_ifs_forecast_dates,
-    get_cgan_forecast_dates,
+    get_region_extent,
+    get_forecast_data_dates,
     get_possible_forecast_dates,
     get_relevant_forecast_steps,
+    get_dataset_file_path,
     get_data_sycn_status,
     set_data_sycn_status,
+    standardize_dataset,
+    slice_dataset_by_bbox,
 )
-from cgan_ui.constants import AOI_BBOX
+from cgan_ui.constants import COUNTRY_NAMES
 
 
-def standardize_dataset(da: xr.DataArray):
-    if "x" in da.dims and "y" in da.dims:
-        da = da.rename({"x": "lon", "y": "lat"})
-    if "longitude" in da.dims and "latitude" in da.dims:
-        da = da.rename({"longitude": "lon", "latitude": "lat"})
-    return da
-
-
-def slice_dataset_by_bbox(ds: xr.Dataset, bbox: list[float]):
-    ds = ds.sel(lon=slice(bbox[0], bbox[2]))
-    if ds.lat.values[0] < ds.lat.values[-1]:
-        ds = ds.sel(lat=slice(bbox[1], bbox[3]))
-    else:
-        ds = ds.sel(lat=slice(bbox[3], bbox[1]))
-    return ds
-
-
-def read_dataset(file_path: str) -> list[xr.DataArray]:
+def read_dataset(file_path: str | Path) -> list[xr.DataArray]:
     try:
-        ds = cfgrib.open_datasets(file_path)
+        ds = cfgrib.open_datasets(str(file_path))
     except Exception as err:
         logger.error(f"failed to read {file_path} dataset file with error {err}")
         return None
@@ -77,91 +62,112 @@ def try_data_download(
 def post_process_ecmwf_grib2_dataset(
     grib2_file_name: str,
     source: str | None = "ecmwf",
-    stream: str | None = "enfo",
     re_try_times: int | None = 5,
     force_process: bool | None = False,
+    mask_region: str | None = COUNTRY_NAMES[0],
 ) -> None:
     logger.info(f"executing post-processing task for {grib2_file_name}")
-    store_path = get_data_store_path()
-    ea_nc_file = (
-        store_path
-        / "interim"
-        / "EA"
-        / source
-        / stream
-        / grib2_file_name.replace("grib2", "nc")
+    data_date = datetime.strptime(grib2_file_name.split("-")[0], "%Y%m%d%H%M%S")
+    downloads_path = get_data_store_path(source="jobs") / "downloads"
+    grib2_file = downloads_path / grib2_file_name
+    nc_file_name = grib2_file_name.replace("grib2", "nc")
+    nc_file = get_dataset_file_path(
+        source=source,
+        mask_region=mask_region,
+        file_name=nc_file_name,
+        data_date=data_date,
     )
-    if not ea_nc_file.exists() or force_process:
-        logger.info(f"post-processing ECMWF IFS forecast data file {grib2_file_name}")
-        grib2_dir = store_path / source / stream
-        file_path = f"{grib2_dir}/{grib2_file_name}"
+
+    if not nc_file.exists() or force_process:
+        logger.info(
+            f"post-processing ECMWF open IFS forecast data file {grib2_file_name}"
+        )
         for _ in range(re_try_times):
-            ds = read_dataset(file_path)
+            ds = read_dataset(str(grib2_file))
             if ds is not None:
                 break
         if ds is None:
             logger.error(
-                f"failed to read {file_path} after {re_try_times} unsuccessful trials"
+                f"failed to read {grib2_file} after {re_try_times} unsuccessful trials"
             )
         else:
-            # save entire raw data file to disk in zarr format
-            # zarr_file = grib2_file_name.replace("grib2", "zarr")
-            # write_job = ds.chunk().to_zarr(
-            #     f"{store_path}/raw/{source}/{stream}/{zarr_file}",
-            #     mode="w",
-            #     compute=False,
-            # )
-            # with ProgressBar():
-            #     logger.info(f"writing {grib2_file_name} dataset to {zarr_file}")
-            #     write_job.compute()
-            # # release memory space occupied by write_job
-            # write_job = None
-            # process area specific masks
-            for key in AOI_BBOX.keys():
-                logger.info(f"processing {grib2_file_name} mask for {key}")
-                sliced = slice_dataset_by_bbox(ds, AOI_BBOX[key])
-                out_dir = store_path / "interim" / key / source / stream
-                if not out_dir.exists():
-                    out_dir.mkdir(parents=True)
-                nc_file = out_dir / grib2_file_name.replace("grib2", "nc")
-                if nc_file.exists():
-                    nc_file.unlink()
-
-                sliced.to_netcdf(out_dir / grib2_file_name.replace("grib2", "nc"))
-                logger.info(f"saved {grib2_file_name} mask for {key} successfully")
-            # remove grib2 file from disk
-            logger.info(f"archiving {grib2_file_name}")
-            archive_dir = store_path / "archive" / source / stream
-            if not archive_dir.exists():
-                archive_dir.mkdir(parents=True)
-
+            ds_slice = slice_dataset_by_bbox(
+                standardize_dataset(ds), get_region_extent(mask_region)
+            )
+            ds = None
+            logger.debug(
+                f"saving {source} open ifs dataset slice for {mask_region} into {nc_file}"
+            )
             try:
-                Path(file_path).replace(target=archive_dir / f"{grib2_file_name}")
-            except Exception as err:
-                logger.error(f"failed to archive {grib2_file_name} with error {err}")
-            # remove idx files from the disk
-            idx_files = [
-                idxf for idxf in grib2_dir.iterdir() if idxf.name.endswith(".idx")
-            ]
-            for idx_file in idx_files:
+                ds_slice.chunk().to_netcdf(
+                    nc_file, mode="w", format="NETCDF4", engine="netcdf4"
+                )
+            except Exception as error:
+                logger.error(
+                    f"failed to save {source} open ifs dataset slice for {mask_region} with error {error}"
+                )
+            else:
+                for country_name in COUNTRY_NAMES[1:]:
+                    logger.info(
+                        f"processing {source} open ifs dataset slice for {country_name}"
+                    )
+                    sliced = slice_dataset_by_bbox(
+                        ds_slice, get_region_extent(country_name)
+                    )
+                    slice_file = get_dataset_file_path(
+                        source=source,
+                        mask_region=country_name,
+                        data_date=data_date,
+                        file_name=nc_file_name,
+                    )
+                    logger.debug(
+                        f"saving {source} open ifs dataset slice for {country_name} into {slice_file}"
+                    )
+                    try:
+                        sliced.chunk().to_netcdf(
+                            path=slice_file, mode="w", format="NETCDF4", engine="netcdf4"
+                        )
+                    except Exception as error:
+                        logger.error(
+                            f"failed to save {source} open ifs dataset slice for {mask_region} with error {error}"
+                        )
+                # remove grib2 file from disk
+                archive_dir = get_data_store_path(source="jobs") / "grib2"
+                logger.info(f"archiving {grib2_file_name} into {archive_dir}")
+
+                if not archive_dir.exists():
+                    archive_dir.mkdir(parents=True)
+
                 try:
-                    idx_file.unlink()
+                    grib2_file.replace(target=archive_dir / grib2_file_name)
                 except Exception as err:
                     logger.error(
-                        f"failed to delete grib2 index file {idx_file.name} with error {err}"
+                        f"failed to archive {grib2_file_name} to {archive_dir} with error {err}"
                     )
+                # remove idx files from the disk
+                idx_files = [
+                    idxf
+                    for idxf in downloads_path.iterdir()
+                    if idxf.name.endswith(".idx")
+                ]
+                for idx_file in idx_files:
+                    try:
+                        idx_file.unlink()
+                    except Exception as err:
+                        logger.error(
+                            f"failed to delete grib2 index file {idx_file.name} with error {err}"
+                        )
 
 
-def post_process_downloaded_ecmwf_forecasts(
-    source: str | None = "ecmwf", stream: str | None = "enfo"
-) -> None:
-    grib2_files = sorted(get_forecast_data_files(source=source, stream=stream))
+def post_process_downloaded_ecmwf_forecasts(source: str | None = "ecmwf") -> None:
+    downloads_path = get_data_store_path(source="jobs") / "downloads"
+    grib2_files = [dfile.name for dfile in downloads_path.iterdir()]
     logger.info(
         f"starting batch post-processing tasks for {'  <---->  '.join(grib2_files)}"
     )
     for grib2_file in grib2_files:
         post_process_ecmwf_grib2_dataset(
-            source=source, stream=stream, grib2_file_name=grib2_file, force_process=True
+            source=source, grib2_file_name=grib2_file, force_process=True
         )
 
 
@@ -178,6 +184,7 @@ def syncronize_open_ifs_forecast_data(
     force_download: bool | None = False,
     min_grib2_size: float | None = 4.1 * 1024,
     min_nc_size: float | None = 360,
+    default_mask: str | None = COUNTRY_NAMES[0],
 ) -> None:
     logger.info(
         f"recived IFS open forecast data syncronization job at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -192,16 +199,10 @@ def syncronize_open_ifs_forecast_data(
         steps = get_relevant_forecast_steps(start=start_step, final=final_step)
 
         # construct data store path
-        data_path = get_data_store_path() / source / stream
-        mask_path = get_data_store_path() / "interim" / "EA" / source / stream
-
+        downloads_path = get_data_store_path(source="jobs") / "downloads"
         # create data directory if it doesn't exist
-        if not data_path.exists():
-            data_path.mkdir(parents=True, exist_ok=True)
-
-        # create data directory if it doesn't exist
-        if not mask_path.exists():
-            mask_path.mkdir(parents=True, exist_ok=True)
+        if not downloads_path.exists():
+            downloads_path.mkdir(parents=True, exist_ok=True)
 
         # create data download client
         client = Client(source=source, model=model, resol=resolution)
@@ -224,8 +225,13 @@ def syncronize_open_ifs_forecast_data(
                 grib2_files = []
                 for request in requests:
                     file_name = f"{request['date'].strftime('%Y%m%d')}000000-{request['step']}h-{stream}-ef.grib2"
-                    mask_file = mask_path / file_name.replace(".grib2", ".nc")
-                    target_file = data_path / file_name
+                    mask_file = get_dataset_file_path(
+                        source="ecmwf",
+                        mask_region=default_mask,
+                        data_date=data_date,
+                        file_name=file_name.replace(".grib2", ".nc"),
+                    )
+                    target_file = downloads_path / file_name
                     target_size = (
                         0
                         if not target_file.exists()
@@ -238,7 +244,9 @@ def syncronize_open_ifs_forecast_data(
                     )
                     if (
                         not (target_file.exists() or mask_file.exists())
-                        or not (target_size < min_grib2_size or mask_size < min_nc_size)
+                        or not (
+                            target_size >= min_grib2_size or mask_size >= min_nc_size
+                        )
                         or force_download
                     ):
                         get_url = client._get_urls(
@@ -268,7 +276,7 @@ def syncronize_open_ifs_forecast_data(
                         grib2_files.append(file_name)
                 for grib2_file in grib2_files:
                     post_process_ecmwf_grib2_dataset(
-                        source=source, stream=stream, grib2_file_name=grib2_file
+                        source=source, grib2_file_name=grib2_file, force_process=True
                     )
             else:
                 logger.warning(
@@ -279,19 +287,23 @@ def syncronize_open_ifs_forecast_data(
         set_data_sycn_status(source="ecmwf", status=0)
 
 
-def generate_cgan_forecasts():
-    ifs_dates = get_ifs_forecast_dates()
-    gan_dates = get_cgan_forecast_dates()
+def generate_cgan_forecasts(mask_region: str | None = COUNTRY_NAMES[0]):
+    ifs_dates = get_forecast_data_dates(mask_region=mask_region, source="gbmc")
+    gan_dates = get_forecast_data_dates(mask_region=mask_region, source="cgan")
     for ifs_date in ifs_dates:
         if ifs_date not in gan_dates:
             # generate forecast for date
-            in_ifs_file = (
-                f"IFS_{ifs_date.year}{ifs_date.month:02}{ifs_date.day:02}_00Z.nc"
+            data_date = datetime.strptime(ifs_date, "%b %d, %Y")
+            ifs_file_path = get_dataset_file_path(
+                source="gbmc",
+                mask_region=mask_region,
+                data_date=data_date,
+                file_name=f"{data_date.year}{data_date.month:02}{data_date.day:02}_00Z.nc",
             )
             subprocess.call(
                 shell=True,
                 cwd=f'{getenv("WORK_HOME","/opt/mycgan")}/ensemble-cgan/dsrnngan',
-                args=f"python test_forecast.py -f {in_ifs_file}",
+                args=f"python test_forecast.py -f {ifs_file_path.name}",
             )
 
 
