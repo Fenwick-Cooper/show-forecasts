@@ -4,7 +4,7 @@ from os import getenv
 from pathlib import Path
 from typing import Dict
 from argparse import ArgumentParser
-from datetime import datetime
+from datetime import datetime, timedelta
 from ecmwf.opendata import Client
 from ecmwf.opendata.client import Result
 from loguru import logger
@@ -19,6 +19,7 @@ from cgan_ui.utils import (
     set_data_sycn_status,
     standardize_dataset,
     slice_dataset_by_bbox,
+    save_to_new_filesystem_structure,
 )
 from cgan_ui.constants import COUNTRY_NAMES
 
@@ -125,7 +126,10 @@ def post_process_ecmwf_grib2_dataset(
                     )
                     try:
                         sliced.chunk().to_netcdf(
-                            path=slice_file, mode="w", format="NETCDF4", engine="netcdf4"
+                            path=slice_file,
+                            mode="w",
+                            format="NETCDF4",
+                            engine="netcdf4",
                         )
                     except Exception as error:
                         logger.error(
@@ -292,51 +296,88 @@ def generate_cgan_forecasts(mask_region: str | None = COUNTRY_NAMES[0]):
     gan_dates = get_forecast_data_dates(mask_region=mask_region, source="cgan")
     for ifs_date in ifs_dates:
         if ifs_date not in gan_dates:
+            logger.info(f"generating cGAN forecast for {ifs_date}")
             # generate forecast for date
             data_date = datetime.strptime(ifs_date, "%b %d, %Y")
-            ifs_file_path = get_dataset_file_path(
-                source="gbmc",
-                mask_region=mask_region,
-                data_date=data_date,
-                file_name=f"{data_date.year}{data_date.month:02}{data_date.day:02}_00Z.nc",
-            )
-            subprocess.call(
-                shell=True,
-                cwd=f'{getenv("WORK_HOME","/opt/mycgan")}/ensemble-cgan/dsrnngan',
-                args=f"python test_forecast.py -f {ifs_file_path.name}",
-            )
+            ifs_filename = f"IFS_{data_date.strftime('%Y%m%d')}_00Z.nc"
+            try:
+                subprocess.call(
+                    shell=True,
+                    cwd=f'{getenv("WORK_HOME","/opt/mycgan")}/ensemble-cgan/dsrnngan',
+                    args=f"python test_forecast.py -f {ifs_filename}",
+                )
+            except Exception as error:
+                logger.error(
+                    f"failed to generate cGAN forecast for {ifs_date} with error {error}"
+                )
+            else:
+                cgan_file_path = (
+                    get_data_store_path(source="jobs")
+                    / "cgan"
+                    / f"GAN_{data_date.strftime('%Y%m%d')}"
+                )
+                save_to_new_filesystem_structure(
+                    file_path=cgan_file_path,
+                    source="cgan",
+                    part_to_replace="GAN_",
+                )
 
 
-def syncronize_post_processed_ifs_data(verbose: bool | None = False):
-    logger.info(
-        f"recived post processed IFS forecast data syncronization job at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    )
+def syncronize_post_processed_ifs_data(
+    mask_region: str | None = COUNTRY_NAMES[0], verbose: bool | None = False
+):
     if not get_data_sycn_status(source="cgan"):
-        logger.info(
-            f"starting post processed IFS forecast data syncronization at {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        )
-        ifs_host = getenv("IFS_SERVER_HOST", "domain.example")
-        ifs_user = getenv("IFS_SERVER_USER", "username")
-        src_ssh = f"{ifs_user}@{ifs_host}"
-        assert (
-            src_ssh != "username@domain.example"
-        ), "you must specify IFS data source server address"
-        src_dir = getenv("IFS_DIR", "/data/Operational")
-        dest_dir = get_data_store_path() / "IFS"
-        logger.info("starting syncronization of IFS forecast data")
-
         # set data syncronization status
         set_data_sycn_status(source="cgan", status=1)
-
-        sysrsync.run(
-            source=str(src_dir),
-            destination=f"{str(dest_dir)}/",
-            source_ssh=src_ssh,
-            private_key=getenv("IFS_PRIVATE_KEY", "/srv/ssl/private.key"),
-            sync_source_contents=True,
-            options=["-a", "-v", "-P"],
-            verbose=verbose,
+        gan_dates = get_forecast_data_dates(mask_region=mask_region, source="cgan")
+        gan_dates = ["Mar 31, 2024"] if not len(gan_dates) else gan_dates
+        final_data_date = datetime.strptime(gan_dates[0].lower(), "%b %d, %Y")
+        delta = datetime.now() - final_data_date
+        logger.debug(
+            f"starting cGAN data syncronization for the time since {final_data_date} to {datetime.now()}"
         )
+        for i in range(delta.days + 1):
+            data_date = final_data_date + timedelta(days=i)
+            logger.info(
+                f"starting post processed IFS forecast data syncronization for {data_date}"
+            )
+
+            ifs_host = getenv("IFS_SERVER_HOST", "domain.example")
+            ifs_user = getenv("IFS_SERVER_USER", "username")
+            src_ssh = f"{ifs_user}@{ifs_host}"
+            assert (
+                src_ssh != "username@domain.example"
+            ), "you must specify IFS data source server address"
+            src_dir = getenv("IFS_DIR", "/data/Operational")
+            dest_dir = get_data_store_path(source="jobs") / "gbmc"
+
+            if not dest_dir.exists():
+                dest_dir.mkdir(parents=True)
+
+            ifs_filename = f"IFS_{data_date.strftime('%Y%m%d')}_00Z.nc"
+            logger.info(
+                f"starting syncronization of IFS forecast data file {ifs_filename}"
+            )
+
+            try:
+                sysrsync.run(
+                    source=f"{src_dir}/{ifs_filename}",
+                    destination=f"{dest_dir}",
+                    source_ssh=src_ssh,
+                    private_key=getenv("IFS_PRIVATE_KEY", "/srv/ssl/private.key"),
+                    options=["-a", "-v", "-P"],
+                    sync_source_contents=False,
+                    verbose=verbose,
+                )
+            except Exception as error:
+                logger.error(f"failed to syncronize gbmc ifs with error {error}")
+
+            dest_file = dest_dir / ifs_filename
+            save_to_new_filesystem_structure(
+                file_path=dest_file,
+                source="gbmc",
+                part_to_replace="IFS_",
+            )
 
         generate_cgan_forecasts()
 

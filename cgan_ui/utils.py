@@ -119,6 +119,52 @@ def slice_dataset_by_bbox(ds: xr.Dataset, bbox: list[float]):
     return ds
 
 
+def save_to_new_filesystem_structure(
+    file_path: Path, source: str, part_to_replace: str | None = None
+) -> None:
+    ds = standardize_dataset(xr.open_dataset(file_path, decode_times=False))
+    fname = file_path.name.replace(part_to_replace, "")
+    data_date = datetime.strptime(
+        fname.replace(".nc", "").split("-")[0].split("_")[0].replace("000000", ""),
+        "%Y%m%d",
+    )
+    target_file = get_dataset_file_path(
+        source=source,
+        data_date=data_date,
+        file_name=fname,
+        mask_region="East Africa",
+    )
+    logger.debug(f"migrating dataset file {file_path} to {target_file}")
+    try:
+        ds.to_netcdf(target_file, mode="w", format="NETCDF4")
+    except Exception as error:
+        logger.error(f"failed to save {target_file} with error {error}")
+    else:
+        logger.debug(f"succeefully save dataset file {file_path} to {target_file}")
+        for country_name in COUNTRY_NAMES[1:]:
+            # create country slices
+            slice = standardize_dataset(
+                slice_dataset_by_bbox(
+                    ds=ds, bbox=get_region_extent(shape_name=country_name)
+                )
+            )
+            slice_target = get_dataset_file_path(
+                source=source,
+                data_date=data_date,
+                file_name=fname,
+                mask_region=country_name,
+            )
+            logger.debug(
+                f"migrating dataset slice for {country_name} to {slice_target}"
+            )
+            try:
+                slice.to_netcdf(slice_target, mode="w", format="NETCDF4")
+            except Exception as error:
+                logger.error(f"failed to save {slice_target} with error {error}")
+            else:
+                logger.debug(f"succeefully migrated dataset slice for {country_name}")
+
+
 # migrate dataset files from initial filesystem structure to revised.
 def migrate_files(source: str):
     store = Path(os.getenv("DATA_STORE_DIR", str(Path("./store")))).absolute()
@@ -138,49 +184,9 @@ def migrate_files(source: str):
     )
     # copy data_files to new files path
     for dfile in data_files:
-        ds = standardize_dataset(xr.open_dataset(dfile, decode_times=False))
-        fname = dfile.name.replace(part_to_replace, "")
-        data_date = datetime.strptime(
-            fname.replace(".nc", "").split("-")[0].split("_")[0].replace("000000", ""),
-            "%Y%m%d",
+        save_to_new_filesystem_structure(
+            file_path=dfile, source=source, part_to_replace=part_to_replace
         )
-        target_file = get_dataset_file_path(
-            source=source,
-            data_date=data_date,
-            file_name=fname,
-            mask_region="East Africa",
-        )
-        logger.debug(f"migrating dataset file {dfile} to {target_file}")
-        try:
-            ds.to_netcdf(target_file, mode="w", format="NETCDF4")
-        except Exception as error:
-            logger.error(f"failed to save {target_file} with error {error}")
-        else:
-            logger.debug(f"succeefully migrated dataset file {dfile}")
-            for country_name in COUNTRY_NAMES[1:]:
-                # create country slices
-                slice = standardize_dataset(
-                    slice_dataset_by_bbox(
-                        ds=ds, bbox=get_region_extent(shape_name=country_name)
-                    )
-                )
-                slice_target = get_dataset_file_path(
-                    source=source,
-                    data_date=data_date,
-                    file_name=fname,
-                    mask_region=country_name,
-                )
-                logger.debug(
-                    f"migrating dataset slice for {country_name} to {slice_target}"
-                )
-                try:
-                    slice.to_netcdf(slice_target, mode="w", format="NETCDF4")
-                except Exception as error:
-                    logger.error(f"failed to save {slice_target} with error {error}")
-                else:
-                    logger.debug(
-                        f"succeefully migrated dataset slice for {country_name}"
-                    )
 
 
 def set_data_sycn_status(source: str | None = "ecmwf", status: int | None = 1):
