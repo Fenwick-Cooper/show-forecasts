@@ -40,7 +40,7 @@ for hour in range(11, 24, 1):
         syncronize_post_processed_ifs_data
     )
     schedule.every().day.at(f"{str(hour).rjust(2, '0')}:00", "Africa/Nairobi").do(
-        syncronize_open_ifs_forecast_data, date_str=datetime.now().strftime("%Y-%m-%d")
+        syncronize_open_ifs_forecast_data, dateback=1
     )
 
 
