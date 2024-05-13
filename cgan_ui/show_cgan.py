@@ -6,6 +6,7 @@
 #   Combine with the show_forecasts.py script used for plotting IFS open data.
 
 import numpy as np
+from pathlib import Path
 from os import getenv
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
@@ -34,10 +35,17 @@ from cgan_ui.data_utils import (
 #    data_dir             - Directory where the data is stored.
 # Returns
 #    An xarray DataSet containing the cGAN rainfall forecasts.
-def load_GAN_forecast(forecast_init_date: datetime, data_dir: str) -> xr.Dataset:
+def load_GAN_forecast(
+    forecast_init_date: datetime, data_dir: Path, mask_region: str
+) -> xr.Dataset:
     d = forecast_init_date  # Shorthand
-    file_name = f"{data_dir}/GAN_{d.year}{d.month:02}{d.day:02}.nc"
-    data = xr.open_dataset(file_name)
+    file_path = (
+        data_dir
+        / str(d.year)
+        / str(d.month).rjust(2, "0")
+        / f"{mask_region.lower().replace(' ','_')}-cgan_forecast-{d.year}{d.month:02}{d.day:02}.nc"
+    )
+    data = xr.open_dataset(file_path)
     return data
 
 

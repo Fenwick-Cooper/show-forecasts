@@ -15,11 +15,11 @@ def get_shape_boundary(
     # Get the shapefile
     try:
         return shpreader.Reader(
-            f"{getenv('APP_DIR', './')}/shapefiles/{shape_name}.shp"
+            f"{getenv('APP_DIR', '.')}/shapefiles/{shape_name}.shp"
         )
     except Exception:
         return shpreader.Reader(
-            f"{getenv('APP_DIR', './')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
+            f"{getenv('APP_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
         )
 
 
@@ -54,10 +54,10 @@ def get_region_extent(
     shape_name: str | None = COUNTRY_NAMES[0], border_size: float | None = 0.5
 ):
     try:
-        sf = shapefile.Reader(f"{getenv('APP_DIR', './')}/shapefiles/{shape_name}.shp")
+        sf = shapefile.Reader(f"{getenv('APP_DIR', '.')}/shapefiles/{shape_name}.shp")
     except Exception:
         sf = shapefile.Reader(
-            f"{getenv('APP_DIR', './')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
+            f"{getenv('APP_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
         )
     # find boundary index
     if shape_name != COUNTRY_NAMES[0]:

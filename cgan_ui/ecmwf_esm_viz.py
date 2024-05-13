@@ -11,7 +11,7 @@
 import numpy as np
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
-from os import getenv
+from pathlib import Path
 from cartopy.feature import ShapelyFeature
 from matplotlib import colors  # For consistency with Harris et. al 2022
 import matplotlib.pyplot as plt
@@ -46,7 +46,8 @@ from cgan_ui.data_utils import (
 def load_forecast(
     key: str,
     forecast_init_date: datetime.date,
-    data_dir: str,
+    data_dir: Path,
+    mask_region: str,
     status_updates: bool | None = True,
     file_ext: str | None = "nc",
 ):
@@ -67,15 +68,18 @@ def load_forecast(
     # Just need the start and end lead times for accumulated variables
     for lead_hour in forecast_hours:
         # Name of the file we will read
-        file_name = f"{data_dir}/{d.year}{d.month:02}{d.day:02}000000-{lead_hour}h-enfo-ef.{file_ext}"
+        file_path = (
+            data_dir
+            / str(d.year)
+            / str(d.month).rjust(2, "0")
+            / f"{mask_region.lower().replace(' ','_')}-open_ifs-{d.year}{d.month:02}{d.day:02}000000-{lead_hour}h-enfo-ef.{file_ext}"
+        )
 
         if status_updates:
-            print(
-                f"Loading {key} with lead time {lead_hour}h from {file_name.split('/')[-1]}"
-            )
+            print(f"Loading {key} with lead time {lead_hour}h from {file_path.name}")
 
         # Open a NetCDF file for reading
-        ds = xr.open_dataset(file_name)
+        ds = xr.open_dataset(file_path)
 
         # Get the DataArray corresponding to the key. 'number' ensures that we pick the ensemble forecast.
         if key == "wind":
@@ -124,8 +128,8 @@ def load_forecast(
 #                       'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
 def plot_forecast(
     data: xr.DataArray,
-    lon_dim: str | None = "lon",
-    lat_dim: str | None = "lat",
+    lon_dim: str | None = "longitude",
+    lat_dim: str | None = "latitude",
     style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = None,
     region: str | None = COUNTRY_NAMES[0],
@@ -290,8 +294,8 @@ def plot_forecast(
 
 def plot_forecast_ensemble(
     data: xr.DataArray,
-    lon_dim: str | None = "lon",
-    lat_dim: str | None = "lat",
+    lon_dim: str | None = "longitude",
+    lat_dim: str | None = "latitude",
     style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = None,
     region: str | None = COUNTRY_NAMES[0],
