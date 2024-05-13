@@ -111,12 +111,19 @@ def standardize_dataset(d: xr.DataArray | xr.Dataset):
 
 
 def slice_dataset_by_bbox(ds: xr.Dataset, bbox: list[float]):
-    ds = ds.sel(longitude=slice(bbox[0], bbox[1]))
-    if ds.latitude.values[0] < ds.latitude.values[-1]:
-        ds = ds.sel(latitude=slice(bbox[2], bbox[3]))
+    try:
+        ds = ds.sel(longitude=slice(bbox[0], bbox[1]))
+    except Exception as err:
+        logger.error(
+            f"failed to slice dataset by bbox with error {err}. Dataset dims: {ds.dims.items()}"
+        )
+        return None
     else:
-        ds = ds.sel(latitude=slice(bbox[3], bbox[2]))
-    return ds
+        if ds.latitude.values[0] < ds.latitude.values[-1]:
+            ds = ds.sel(latitude=slice(bbox[2], bbox[3]))
+        else:
+            ds = ds.sel(latitude=slice(bbox[3], bbox[2]))
+        return ds
 
 
 def save_to_new_filesystem_structure(
@@ -132,37 +139,50 @@ def save_to_new_filesystem_structure(
         source=source,
         data_date=data_date,
         file_name=fname,
-        mask_region="East Africa",
+        mask_region=os.getenv("DEFAULT_MASK", "East Africa"),
     )
     logger.debug(f"migrating dataset file {file_path} to {target_file}")
+    errors = []
     try:
         ds.to_netcdf(target_file, mode="w", format="NETCDF4")
     except Exception as error:
-        logger.error(f"failed to save {target_file} with error {error}")
+        errors.append(f"failed to save {target_file} with error {error}")
     else:
-        logger.debug(f"succeefully save dataset file {file_path} to {target_file}")
+        logger.debug(f"succeefully saved dataset file {file_path} to {target_file}")
         for country_name in COUNTRY_NAMES[1:]:
             # create country slices
-            slice = standardize_dataset(
-                slice_dataset_by_bbox(
-                    ds=ds, bbox=get_region_extent(shape_name=country_name)
-                )
+            sliced = slice_dataset_by_bbox(
+                ds=ds, bbox=get_region_extent(shape_name=country_name)
             )
-            slice_target = get_dataset_file_path(
-                source=source,
-                data_date=data_date,
-                file_name=fname,
-                mask_region=country_name,
-            )
-            logger.debug(
-                f"migrating dataset slice for {country_name} to {slice_target}"
-            )
-            try:
-                slice.to_netcdf(slice_target, mode="w", format="NETCDF4")
-            except Exception as error:
-                logger.error(f"failed to save {slice_target} with error {error}")
+            if sliced is None:
+                errors.append(f"error slicing {file_path.name} for bbox {country_name}")
             else:
-                logger.debug(f"succeefully migrated dataset slice for {country_name}")
+                slice_target = get_dataset_file_path(
+                    source=source,
+                    data_date=data_date,
+                    file_name=fname,
+                    mask_region=country_name,
+                )
+                logger.debug(
+                    f"migrating dataset slice for {country_name} to {slice_target}"
+                )
+                try:
+                    sliced.to_netcdf(slice_target, mode="w", format="NETCDF4")
+                except Exception as error:
+                    errors.append(f"failed to save {slice_target} with error {error}")
+                else:
+                    logger.debug(
+                        f"succeefully migrated dataset slice for {country_name}"
+                    )
+    if not len(errors):
+        logger.debug(
+            f"removing original file {file_path.name} after a successful migration"
+        )
+        file_path.unlink(missing_ok=True)
+    else:
+        logger.error(
+            f"failed to migrate {target_file.name} with following {len(errors)} Errors: {' <-> '.join(errors)}"
+        )
 
 
 # migrate dataset files from initial filesystem structure to revised.

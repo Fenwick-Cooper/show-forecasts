@@ -326,6 +326,7 @@ def generate_cgan_forecasts(mask_region: str | None = COUNTRY_NAMES[0]):
 def syncronize_post_processed_ifs_data(
     mask_region: str | None = COUNTRY_NAMES[0], verbose: bool | None = False
 ):
+    logger.debug(f"received cGAN data syncronization for {mask_region}")
     if not get_data_sycn_status(source="cgan"):
         # set data syncronization status
         set_data_sycn_status(source="cgan", status=1)
