@@ -175,10 +175,11 @@ def save_to_new_filesystem_structure(
                         f"succeefully migrated dataset slice for {country_name}"
                     )
     if not len(errors):
-        logger.debug(
-            f"removing original file {file_path.name} after a successful migration"
-        )
-        file_path.unlink(missing_ok=True)
+        if "IFS_" not in file_path.name:
+            logger.debug(
+                f"removing original file {file_path.name} after a successful migration"
+            )
+            file_path.unlink(missing_ok=True)
     else:
         logger.error(
             f"failed to migrate {target_file.name} with following {len(errors)} Errors: {' <-> '.join(errors)}"
