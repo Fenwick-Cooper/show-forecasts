@@ -19,6 +19,7 @@ from cgan_ui.utils import (
     set_data_sycn_status,
     standardize_dataset,
     slice_dataset_by_bbox,
+    migrate_files,
     save_to_new_filesystem_structure,
 )
 from cgan_ui.constants import COUNTRY_NAMES
@@ -443,5 +444,8 @@ if __name__ == "__main__":
             post_process_downloaded_ecmwf_forecasts()
         case "cgan":
             syncronize_post_processed_ifs_data()
+        case "migrate":
+            for source in ["ecmwf", "gbmc", "cgan"]:
+                migrate_files(source)
         case _:
             logger.error(f"handler for {args.command} not implemented!")

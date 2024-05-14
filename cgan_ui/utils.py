@@ -115,7 +115,7 @@ def slice_dataset_by_bbox(ds: xr.Dataset, bbox: list[float]):
         ds = ds.sel(longitude=slice(bbox[0], bbox[1]))
     except Exception as err:
         logger.error(
-            f"failed to slice dataset by bbox with error {err}. Dataset dims: {ds.dims.items()}"
+            f"failed to slice dataset by bbox with error {err}. Dataset dims: {ds.dims}"
         )
         return None
     else:
