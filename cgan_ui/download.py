@@ -314,7 +314,7 @@ def generate_cgan_forecasts(mask_region: str | None = COUNTRY_NAMES[0]):
                 cgan_file_path = (
                     get_data_store_path(source="jobs")
                     / "cgan"
-                    / f"GAN_{data_date.strftime('%Y%m%d')}"
+                    / f"GAN_{data_date.strftime('%Y%m%d')}.nc"
                 )
                 save_to_new_filesystem_structure(
                     file_path=cgan_file_path,
