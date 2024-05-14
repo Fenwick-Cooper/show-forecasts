@@ -80,9 +80,9 @@ services:
     volumes:
       - ${MERCURY_STATIC:-./data/static}:/app/mercury/static
       - ${MERCURY_MEDIA:-./data/media}:/app/mercury/media
-      - ${CGAN_DATA_STORE:-./data/store}/interim:${PUBLIC_DATA_DIR:-/srv/data}/open-ifs
-      - ${CGAN_DATA_STORE:-./data/store}/IFS:${PUBLIC_DATA_DIR:-/srv/data}/cgan-ifs
-      - ${CGAN_DATA_STORE:-./data/store}/GAN_forecasts:${PUBLIC_DATA_DIR:-/srv/data}/cgan-forecast
+      - ${CGAN_DATA_STORE:-./data/store}/ecmwf:${PUBLIC_DATA_DIR:-/srv/data}/open-ifs
+      - ${CGAN_DATA_STORE:-./data/store}/gbmc:${PUBLIC_DATA_DIR:-/srv/data}/cgan-ifs
+      - ${CGAN_DATA_STORE:-./data/store}/cgan:${PUBLIC_DATA_DIR:-/srv/data}/cgan-forecast
     depends_on:
       - webapp
     command: '/bin/sh -c ''nginx -g "daemon off;"'''
