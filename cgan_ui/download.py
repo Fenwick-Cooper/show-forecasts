@@ -372,13 +372,13 @@ def syncronize_post_processed_ifs_data(
                 )
             except Exception as error:
                 logger.error(f"failed to syncronize gbmc ifs with error {error}")
-
-            dest_file = dest_dir / ifs_filename
-            save_to_new_filesystem_structure(
-                file_path=dest_file,
-                source="gbmc",
-                part_to_replace="IFS_",
-            )
+            else:
+                dest_file = dest_dir / ifs_filename
+                save_to_new_filesystem_structure(
+                    file_path=dest_file,
+                    source="gbmc",
+                    part_to_replace="IFS_",
+                )
 
         generate_cgan_forecasts()
 
