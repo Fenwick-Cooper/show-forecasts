@@ -121,7 +121,7 @@ def get_forecast_data_dates(
         in_files = [True if dfile in data_files else False for dfile in files_for_date]
         if False not in in_files:
             tmp_dates.append(data_date)
-    return [data_date.strftime("%b %d, %Y") for data_date in tmp_dates]
+    return [data_date.strftime("%b %d, %Y") for data_date in reversed(tmp_dates)]
 
 
 def standardize_dataset(d: xr.DataArray | xr.Dataset):
