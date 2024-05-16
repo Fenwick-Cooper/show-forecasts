@@ -71,7 +71,8 @@ def get_directory_files(data_path: Path, files: list[Path] | None = []) -> list[
             files.append(item)
         elif item.is_dir():
             files.extend(get_directory_files(data_path=item, files=files))
-    return files
+    # TODO: re-factor to remove below filter step. Could be expensive on more data
+    return list(set(files))
 
 
 def get_forecast_data_files(mask_region: str, source: str) -> list[str]:
@@ -80,7 +81,19 @@ def get_forecast_data_files(mask_region: str, source: str) -> list[str]:
     return [str(dfile).split("/")[-1] for dfile in data_files]
 
 
-def get_forecast_data_dates(mask_region: str, source: str) -> list[str]:
+def get_ecmwf_files_for_date(
+    data_date: datetime, mask_region: str | None = "East Africa"
+) -> list[str]:
+    steps = get_relevant_forecast_steps()
+    return [
+        f"{mask_region.lower().replace(' ', '_')}-open_ifs-{data_date.strftime('%Y%m%d')}000000-{step}h-enfo-ef.grib2"
+        for step in steps
+    ]
+
+
+def get_forecast_data_dates(
+    mask_region: str, source: str, strict: bool | None = True
+) -> list[str]:
     data_files = get_forecast_data_files(source=source, mask_region=mask_region)
     data_dates = sorted(
         set(
@@ -90,16 +103,25 @@ def get_forecast_data_dates(mask_region: str, source: str) -> list[str]:
             ]
         )
     )
-    return list(
-        reversed(
-            [
-                datetime.strptime(data_date.replace("000000", ""), "%Y%m%d").strftime(
-                    "%b %d, %Y"
-                )
-                for data_date in data_dates
-            ]
+    if not strict:
+        return list(
+            reversed(
+                [
+                    datetime.strptime(
+                        data_date.replace("000000", ""), "%Y%m%d"
+                    ).strftime("%b %d, %Y")
+                    for data_date in data_dates
+                ]
+            )
         )
-    )
+    tmp_dates = []
+    for date_str in data_dates:
+        data_date = datetime.strptime(date_str.replace("000000", ""), "%Y%m%d")
+        files_for_date = get_ecmwf_files_for_date(data_date)
+        in_files = [True if dfile in data_files else False for dfile in files_for_date]
+        if False not in in_files:
+            tmp_dates.append(data_date)
+    return [data_date.strftime("%b %d, %Y") for data_date in tmp_dates]
 
 
 def standardize_dataset(d: xr.DataArray | xr.Dataset):
