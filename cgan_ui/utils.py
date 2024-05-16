@@ -86,7 +86,7 @@ def get_ecmwf_files_for_date(
 ) -> list[str]:
     steps = get_relevant_forecast_steps()
     return [
-        f"{mask_region.lower().replace(' ', '_')}-open_ifs-{data_date.strftime('%Y%m%d')}000000-{step}h-enfo-ef.grib2"
+        f"{mask_region.lower().replace(' ', '_')}-open_ifs-{data_date.strftime('%Y%m%d')}000000-{step}h-enfo-ef.nc"
         for step in steps
     ]
 
@@ -103,7 +103,7 @@ def get_forecast_data_dates(
             ]
         )
     )
-    if not strict and source == "ecmwf":
+    if not strict or source != "ecmwf":
         return list(
             reversed(
                 [
