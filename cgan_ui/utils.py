@@ -103,7 +103,7 @@ def get_forecast_data_dates(
             ]
         )
     )
-    if not strict:
+    if not strict and source == "ecmwf":
         return list(
             reversed(
                 [
