@@ -2,6 +2,7 @@
 
 import numpy as np
 from datetime import datetime
+from pathlib import Path
 from os import getenv
 from loguru import logger
 import cartopy.io.shapereader as shpreader
@@ -14,9 +15,7 @@ def get_shape_boundary(
 ) -> shpreader.BasicReader:
     # Get the shapefile
     try:
-        return shpreader.Reader(
-            f"{getenv('APP_DIR', '.')}/shapefiles/{shape_name}.shp"
-        )
+        return shpreader.Reader(f"{getenv('APP_DIR', '.')}/shapefiles/{shape_name}.shp")
     except Exception:
         return shpreader.Reader(
             f"{getenv('APP_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
@@ -60,7 +59,10 @@ def get_region_extent(
             f"{getenv('APP_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
         )
     # find boundary index
-    if shape_name != COUNTRY_NAMES[0]:
+    if (
+        shape_name != COUNTRY_NAMES[0]
+        and not Path(f"{getenv('APP_DIR', '.')}/shapefiles/{shape_name}.shp").exists()
+    ):
         shape_index = [
             index
             for index in range(len(sf.records()))
