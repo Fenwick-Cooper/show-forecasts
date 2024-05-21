@@ -338,7 +338,7 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
         axs=axs.flatten()
 
     # There are plots for each valid time
-    for valid_time_idx in valid_time_idx_list:
+    for idx, valid_time_idx in enumerate(valid_time_idx_list):
 
         # Convert the forecast valid time to a datetime.datetime format
         valid_time = datetime64_to_datetime(data['fcst_valid_time'][0,valid_time_idx].values)
@@ -346,7 +346,7 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
         # The percentage of ensemble members that exceed the threshold
         plot_data = np.sum(data["precipitation"][0,:,valid_time_idx,:,:] > threshold, axis=0) * 100 / len(data["member"])
 
-        ax = axs[valid_time_idx]
+        ax = axs[idx]
         ax.gridlines()
         ax.set_facecolor('white')  # For consistency with Harris et. al 2022
         #ax.add_feature(cfeature.COASTLINE, linewidth=1)
