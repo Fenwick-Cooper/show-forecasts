@@ -343,6 +343,10 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
         # Convert the forecast valid time to a datetime.datetime format
         valid_time = datetime64_to_datetime(data['fcst_valid_time'][0,valid_time_idx].values)
 
+        # Keep the first valid time for the plot title
+        if (idx == 0):
+            first_valid_time = valid_time
+
         # The percentage of ensemble members that exceed the threshold
         plot_data = np.sum(data["precipitation"][0,:,valid_time_idx,:,:] > threshold, axis=0) * 100 / len(data["member"])
 
@@ -369,7 +373,7 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
         else:
             cb.set_ticks(ticks=plot_levels,labels=plot_level_names)
 
-    title_string = f"""Jurre Brishti cGAN ensemble: {valid_time.date()} - {(valid_time + timedelta(hours=6)).date()}
+    title_string = f"""Jurre Brishti cGAN ensemble: {first_valid_time.date()} - {(valid_time + timedelta(hours=6)).date()}
     Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}."""
     fig.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
