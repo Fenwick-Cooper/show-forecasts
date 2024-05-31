@@ -1,15 +1,18 @@
 # Utility functions and data used internally for processing forecasts
 
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import shapefile
 
+# A list of the locations that can be specified
+from .shapes.locations import locations
 
 # Returns the normalisation used to plot
 # Arguments
 #   plot_units='mm/h' - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
 # Returns
-#   The normalisation to apply when plotting or 1 if the units are not specified correctly
+#   The normalisation to apply when plotting or 1 if the units are not specified correctly.
+#   The string plot_units corresponding to the normalisation.
 def get_plot_normalisation(plot_units):
     if (plot_units == 'mm/h'):
         plot_norm = 1
@@ -20,10 +23,12 @@ def get_plot_normalisation(plot_units):
     elif (plot_units == 'mm/week'):
         plot_norm = 7*24
     else:
-        print(f"ERROR: Unknown plot units {plot_units}")
+        print(f"ERROR: Unknown plot units '{plot_units}'.")
         print(f"       Options are 'mm/h', 'mm/6h', 'mm/day', 'mm/week'.")
-        return 1
-    return plot_norm
+        print(f"       Selecting 'mm/h'.")
+        plot_norm = 1
+        plot_units = 'mm/h'
+    return plot_norm, plot_units
 
 
 # Returns the bounding box of the region that we want to plot
@@ -189,4 +194,17 @@ def datetime64_to_datetime(datetime64):
     unix_epoch = np.datetime64(0, 's')
     one_second = np.timedelta64(1, 's')
     seconds_since_epoch = (datetime64 - unix_epoch) / one_second
-    return datetime.utcfromtimestamp(seconds_since_epoch)
+    time_zone = timezone(timedelta(0), name='UTC')
+    return datetime.fromtimestamp(seconds_since_epoch, time_zone)
+    # return datetime.utcfromtimestamp(seconds_since_epoch)
+
+
+# Prints the named locations avaliable for making histograms
+# Arguments
+#   country=None - Optionally restrict the country to one of 'Kenya', 'South Sudan', 'Rwanda',
+#                  'Burundi', 'Djibouti', 'Eritrea', 'Ethiopia', 'Sudan', 'Somalia',
+#                  'Tanzania', 'Uganda'
+def print_locations(country=None):
+    for i in range(len(locations)):
+        if (country == None) or (country == locations[i]['country']):
+            print(f"{locations[i]['name']}, {locations[i]['country']}, ({locations[i]['latitude']}N, {locations[i]['longitude']}E)")
