@@ -199,7 +199,7 @@ def datetime64_to_datetime(datetime64):
     # return datetime.utcfromtimestamp(seconds_since_epoch)
 
 
-# Prints the named locations avaliable for making histograms
+# Prints the named locations available for making histograms
 # Arguments
 #   country=None - Optionally restrict the country to one of 'Kenya', 'South Sudan', 'Rwanda',
 #                  'Burundi', 'Djibouti', 'Eritrea', 'Ethiopia', 'Sudan', 'Somalia',

@@ -425,7 +425,7 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
 #   country=None      - For the case of the same name in different countries, the country can optionally
 #                       be selected from 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
 #                       'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'.
-#   latitude=None     - Optional lattiude in degrees north. If specified along with a longitude, this
+#   latitude=None     - Optional latiude in degrees north. If specified along with a longitude, this
 #                       location is used instead of any named location in the list returned by
 #                       print_locations().
 #   longitude=None    - Optional longitude in degrees north. If specified along with a latitude, this
