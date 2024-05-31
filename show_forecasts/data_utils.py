@@ -123,7 +123,7 @@ def get_contour_levels(style):
         #3ef600 rgb(62, 246, 0)     2-5 mm/day
         #ffffff rgb(255, 255, 255)  Less than 1 mm/day
 
-        plot_levels = np.array([0,2,5,10,15,20,25,30,35,40,50,60,70,80,100,1000]) / 24  # Convert from mm/day to mm/h
+        plot_levels = np.array([0,1,5,10,15,20,25,30,35,40,50,60,70,80,100,1000]) / 24  # Convert from mm/day to mm/h
         plot_colours = [[1.        , 1.        , 1.        , 1.        ],
                         [0.24313725, 0.96470588, 0.        , 1.        ],
                         [0.22352941, 0.85098039, 0.01568627, 1.        ],
