@@ -9,6 +9,7 @@
 #    Plot ensemble members
 #    Runoff colour scale is not the best
 import numpy as np
+from os import getenv
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
 from pathlib import Path
@@ -142,7 +143,7 @@ def plot_forecast(
             plot_units = data.attrs["units"]
 
         # Get the units to use for plotting
-        plot_norm = get_plot_normalisation(plot_units)
+        plot_norm, plot_units = get_plot_normalisation(plot_units)
 
         # The default plot_norm is for mm/h
         if data.attrs["units"] == "mm/day":
@@ -172,14 +173,19 @@ def plot_forecast(
         else:
             print("Warning: Styles are only available for total precipitation")
 
-    # Load the border shapefile
-    reader = get_shape_boundary(shape_name=region)
+    # Load EA region border shapefile
+    reader = get_shape_boundary()
     shape_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
 
     # Get the extent of the region that we are looking at
     if region != COUNTRY_NAMES[0]:
+        # load area of interest boundary layer
+        reader = get_shape_boundary(shape_name=region)
+        regions_feature = ShapelyFeature(
+            reader.geometries(), ccrs.PlateCarree(), facecolor="none"
+        )
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Define the figure and each axis for the rows and columns
@@ -234,6 +240,7 @@ def plot_forecast(
             transform=ccrs.PlateCarree(),
         )
     if region != COUNTRY_NAMES[0]:
+        ax.add_feature(regions_feature, linestyle=":")
         ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
     cb.set_label(plot_units)  # Label the colorbar
@@ -280,13 +287,14 @@ def plot_forecast(
             transform=ccrs.PlateCarree(),
         )
     if region != COUNTRY_NAMES[0]:
+        ax.add_feature(regions_feature, linestyle=":")
         ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
     cb.set_label(plot_units)  # Label the colorbar
     ax.set_title(f"Ensemble standard deviation", size=14)  # This plot's title
 
     fig.suptitle(
-        f"IFS {data.attrs['name']}: Valid {valid_time} - {valid_time + timedelta(days=1)}"
+        f"IFS {data.attrs['name']}: Valid {valid_time} - {valid_time + timedelta(days=1)} {getenv('DEFAULT_TIMEZONE', 'EAT')}"
     )  # Overall title
     plt.tight_layout()  # Looks nicer
     plt.show()  # Finally draw the plot
@@ -308,7 +316,7 @@ def plot_forecast_ensemble(
             plot_units = data.attrs["units"]
 
         # Get the units to use for plotting
-        plot_norm = get_plot_normalisation(plot_units)
+        plot_norm, plot_units = get_plot_normalisation(plot_units)
 
         # The default plot_norm is for mm/h
         if data.attrs["units"] == "mm/day":
@@ -339,13 +347,18 @@ def plot_forecast_ensemble(
             print("Warning: Styles are only available for total precipitation")
 
     # Load the border shapefile
-    reader = get_shape_boundary(shape_name=region)
+    reader = get_shape_boundary()
     shape_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
 
     # Get the extent of the region that we are looking at
     if region != COUNTRY_NAMES[0]:
+        # load area of interest boundary layer
+        reader = get_shape_boundary(shape_name=region)
+        regions_feature = ShapelyFeature(
+            reader.geometries(), ccrs.PlateCarree(), facecolor="none"
+        )
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Convert the forecast valid time to a datetime.datetime format
@@ -407,6 +420,7 @@ def plot_forecast_ensemble(
                 transform=ccrs.PlateCarree(),
             )
         if region != COUNTRY_NAMES[0]:
+            ax.add_feature(regions_feature, linestyle=":")
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         ax.set_title(f"{ax_idx+1}", size=14)  # This plot's title
 
@@ -425,6 +439,6 @@ def plot_forecast_ensemble(
     cb.set_label(plot_units)  # Label the colorbar
 
     fig.suptitle(
-        f"IFS ensemble: Valid {valid_time} - {valid_time + timedelta(days=1)}"
+        f"IFS ensemble: Valid {valid_time} - {valid_time + timedelta(days=1)} {getenv('DEFAULT_TIMEZONE', 'EAT')}"
     )  # Overall title
     plt.show()  # Finally draw the plot

@@ -49,13 +49,6 @@ DATA_PARAMS = {
 LEAD_START_HOUR = 30
 LEAD_END_HOUR = 54
 
-# area of interest bounding box
-AOI_BBOX = {
-    "EA": [21, -11.75, 51, 24],
-    "KEN": [33.6, -5.84, 43.6, 6.22],
-    "ETH": [31.58, 3.12, 47.65, 16.5],
-}
-
 # visualization color schemes
 COLOR_SCHEMES = ["ICPAC", "ICPAC_heavy", "KMD", "EMI", "EMI_heavy", "Default"]
 
@@ -75,4 +68,18 @@ COUNTRY_NAMES = [
     "Uganda",
 ]
 
-TP_PLOT_UNITS = ["mm/week", "mm/day", "mm/6h", "mm/h"]
+ACCUMULATION_UNITS = ["mm/h", "mm/6h", "mm/day", "mm/week"]
+ACCUMULATION_TIME = ["6h", "24h"]
+VALID_TIME_START_HOUR = ["0", "6", "12", "18", "all"]
+
+
+# Plot countour levels and their labels
+GAN_THRESHOLD_PLOT_LEVELS = [
+    0,
+    2.5,
+    25,
+    50,
+    75,
+    100,
+]  # Percentage chance of rain above this value
+GAN_THRESHOLD_PLOT_LEVEL_NAMES = ["None", "Possible", "Low", "Medium", "High", "Certain"]
