@@ -26,6 +26,7 @@ dask = "^2024.4.0"
 zarr = "^2.17.1"
 sysrsync = "^1.1.1"
 pyshp = "^2.3.1"
+leafmap = "^0.33.0"
 
 
 [build-system]
