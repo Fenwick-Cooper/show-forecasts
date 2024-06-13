@@ -1,5 +1,6 @@
 # Utility functions and data used internally for processing forecasts
-
+import json
+from typing import Dict
 import numpy as np
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +9,12 @@ from loguru import logger
 import cartopy.io.shapereader as shpreader
 import shapefile
 from cgan_ui.constants import COUNTRY_NAMES
+
+
+def get_locations_data() -> list[Dict[str, str]]:
+    data_file = f"{getenv('APP_DIR', '.')}/shapefiles/locations.json"
+    with open(data_file, "r") as jf:
+        return json.loads(jf.read())
 
 
 def get_shape_boundary(
