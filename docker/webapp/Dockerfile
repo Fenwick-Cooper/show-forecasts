@@ -38,4 +38,5 @@ ENV PATH=${WORK_HOME}/bin:${VENV_DIR}/bin:$PATH \
 
 RUN python -m venv ${VENV_DIR} && \
     . ${VENV_DIR}/bin/activate && \
-    pip install --no-cache -e .
+    pip install --no-cache -e . && \
+    pyppeteer-install
