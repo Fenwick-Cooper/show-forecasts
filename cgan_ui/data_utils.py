@@ -11,10 +11,15 @@ import shapefile
 from cgan_ui.constants import COUNTRY_NAMES
 
 
-def get_locations_data() -> list[Dict[str, str]]:
+def get_locations_data(country_name: str | None = None) -> list[Dict[str, str]]:
     data_file = f"{getenv('APP_DIR', '.')}/shapefiles/locations.json"
     with open(data_file, "r") as jf:
-        return json.loads(jf.read())
+        locations = json.loads(jf.read())
+    if country_name != COUNTRY_NAMES[0] and country_name in COUNTRY_NAMES:
+        return [
+            location for location in locations if location["country"] == country_name
+        ]
+    return locations
 
 
 def get_shape_boundary(

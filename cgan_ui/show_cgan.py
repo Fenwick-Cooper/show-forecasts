@@ -619,10 +619,11 @@ def plot_GAN_threshold_chance(
 def plot_GAN_local_histograms(
     data: xr.Dataset,
     location_name: str,
-    country: str | None = None,
+    country: str | None = COUNTRY_NAMES[0],
     latitude: float | None = None,
     longitude: float | None = None,
     plot_units: str | None = "mm/h",
+    file_name: str | None = None,
 ):
 
     if ((latitude == None) and (longitude != None)) or (
@@ -640,7 +641,7 @@ def plot_GAN_local_histograms(
 
         for location in locations:
             if (location["name"] == location_name) and (
-                (location["country"] == country) or (country == None)
+                (location["country"] == country) or (country == COUNTRY_NAMES[0])
             ):
                 location_found = True
                 break
@@ -651,7 +652,7 @@ def plot_GAN_local_histograms(
     else:  # latitude and longitude are specified
         location = {
             "name": location_name,
-            "country": "",
+            "country": COUNTRY_NAMES[0],
             "latitude": latitude,
             "longitude": longitude,
         }
@@ -703,4 +704,12 @@ def plot_GAN_local_histograms(
     {location["name"]}, {location["country"]} ({location["latitude"]:.4f}N, {location["longitude"]:.4f}E)"""
     plt.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
+
+    # Save the plot
+    if file_name != None:
+        if file_name[-4:] in [".png", ".jpg", ".pdf"]:
+            plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
+        else:
+            print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
+
     plt.show()
