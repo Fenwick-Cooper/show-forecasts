@@ -252,6 +252,6 @@ def datetime64_to_datetime(datetime64) -> datetime:
     unix_epoch = np.datetime64(0, "s")
     one_second = np.timedelta64(1, "s")
     seconds_since_epoch = (datetime64 - unix_epoch) / one_second
-    time_zone = timezone(timedelta(0), name=getenv("DEFAULT_TIMEZONE", "EAT"))
+    time_zone = timezone(timedelta(0), name=getenv("DEFAULT_TIMEZONE", "UTC"))
     return datetime.fromtimestamp(seconds_since_epoch, time_zone)
     # return datetime.utcfromtimestamp(seconds_since_epoch)

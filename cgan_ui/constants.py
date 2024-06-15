@@ -70,7 +70,7 @@ COUNTRY_NAMES = [
 
 ACCUMULATION_UNITS = ["mm/h", "mm/6h", "mm/day", "mm/week"]
 ACCUMULATION_TIME = ["6h", "24h"]
-VALID_TIME_START_HOUR = ["0", "6", "12", "18", "all"]
+VALID_TIME_START_HOUR = ["6", "12", "18", "0", "all"]
 
 
 # Plot countour levels and their labels
@@ -82,4 +82,11 @@ GAN_THRESHOLD_PLOT_LEVELS = [
     75,
     100,
 ]  # Percentage chance of rain above this value
-GAN_THRESHOLD_PLOT_LEVEL_NAMES = ["None", "Possible", "Low", "Medium", "High", "Certain"]
+GAN_THRESHOLD_PLOT_LEVEL_NAMES = [
+    "None",
+    "Possible",
+    "Low",
+    "Medium",
+    "High",
+    "Certain",
+]

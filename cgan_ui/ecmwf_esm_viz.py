@@ -294,7 +294,7 @@ def plot_forecast(
     ax.set_title(f"Ensemble standard deviation", size=14)  # This plot's title
 
     fig.suptitle(
-        f"IFS {data.attrs['name']}: Valid {valid_time} - {valid_time + timedelta(days=1)} {getenv('DEFAULT_TIMEZONE', 'EAT')}"
+        f"IFS {data.attrs['name']}: Valid {valid_time} - {valid_time + timedelta(days=1)} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
     plt.tight_layout()  # Looks nicer
     plt.show()  # Finally draw the plot
@@ -439,6 +439,6 @@ def plot_forecast_ensemble(
     cb.set_label(plot_units)  # Label the colorbar
 
     fig.suptitle(
-        f"IFS ensemble: Valid {valid_time} - {valid_time + timedelta(days=1)} {getenv('DEFAULT_TIMEZONE', 'EAT')}"
+        f"IFS ensemble: Valid {valid_time} - {valid_time + timedelta(days=1)} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
     plt.show()  # Finally draw the plot
