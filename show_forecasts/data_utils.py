@@ -5,7 +5,7 @@ import cartopy.io.shapereader as shpreader
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict
-from cgan_ui.constants import COUNTRY_NAMES
+from show_forecasts.constants import COUNTRY_NAMES
 
 
 def load_env_file(
