@@ -203,10 +203,11 @@ def plot_GAN_forecast(data, accumulation_time='6h', valid_time_start_hour='all',
 #   plot_units='mm/h'       - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
 #   region='ICPAC'          - can be 'ICPAC', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
 #                             'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
+#   max_num_plots=50        - Maximum number of ensemble members to plot.
 #   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
 #                             plot is saved in that format.
 def plot_GAN_ensemble(data, valid_time_start_hour=6, style=None, plot_units='mm/h', region='ICPAC',
-                      file_name=None):
+                      max_num_plots=50, file_name=None):
     
     # Get the units to use for plotting
     plot_norm, plot_units = get_plot_normalisation(plot_units)
@@ -247,15 +248,23 @@ def plot_GAN_ensemble(data, valid_time_start_hour=6, style=None, plot_units='mm/
     # Convert the forecast valid time to a datetime.datetime format
     valid_time = datetime64_to_datetime(data['fcst_valid_time'][0,valid_time_idx].values)
 
+    # How many plots will we make
+    num_plots = np.min([max_num_plots, data['member'].size])
+    num_rows = int(np.ceil(num_plots/5))
+
     # Define the figure and each axes for the rows and columns
-    fig, axs = plt.subplots(nrows=10, ncols=5, subplot_kw={'projection': ccrs.PlateCarree()},
-                            figsize=(10,25), layout="constrained")
+    fig, axs = plt.subplots(nrows=num_rows, ncols=5, subplot_kw={'projection': ccrs.PlateCarree()},
+                            figsize=(10,2.8*num_rows+0.9), layout="constrained")
 
     # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
     axs=axs.flatten()
 
+    # Don't show axes without plots
+    for ax_idx in range(num_plots, num_rows*5):
+        axs[ax_idx].set_axis_off()
+
     # For each ensemble member
-    for ax_idx in range(data['member'].size):
+    for ax_idx in range(num_plots):
 
         ax=axs[ax_idx]  # First plot (left)
         ax.add_feature(cfeature.COASTLINE, linewidth=1)  # Draw some features to see where we are
@@ -308,7 +317,7 @@ def plot_GAN_ensemble(data, valid_time_start_hour=6, style=None, plot_units='mm/
 #                             'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
 #   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
 #                             plot is saved in that format.
-def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_start_hour=6,
+def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_start_hour=6, style=None,
                               show_percentages=False, region='ICPAC', file_name=None):
 
     # Get the units to use for plotting
@@ -368,6 +377,9 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
         # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
         axs=axs.flatten()
 
+    # Define the plot colours
+    plot_colours = get_threshold_plot_colours(style)
+
     # There are plots for each valid time
     for idx, valid_time_idx in enumerate(valid_time_idx_list):
 
@@ -393,7 +405,7 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
         ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
 
         c = ax.contourf(data['longitude'], data['latitude'], plot_data,
-                        levels=plot_levels, transform=ccrs.PlateCarree(), cmap='Blues')
+                        levels=plot_levels, transform=ccrs.PlateCarree(), colors=plot_colours)
         ax.set_title(f"Valid {valid_time.time()} - {(valid_time + timedelta(hours=6)).time()}", size=14)
 
         cb = plt.colorbar(c, fraction=0.04)
@@ -419,6 +431,94 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
     plt.show()
 
 
+# Draw a marker at a specific location.
+#   name=None               - An optional string containing the name of the point.
+#   latitude=None           - The latitude of the point.
+#   longitude=None          - The longitude of the point.
+#   region='ICPAC'          - Can be 'ICPAC', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
+#                             'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
+#   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
+#                             plot is saved in that format.
+def plot_location_marker(location_name=None, latitude=None, longitude=None, region='ICPAC', file_name=None):
+
+    if (((latitude == None) and (longitude != None)) or
+        ((latitude != None) and (longitude == None))):
+        print("ERROR: Either don't specify latitude and longitude or specify both.")
+        return
+
+    # lattiude and longitude are not specified
+    if (latitude == None) and (longitude == None):
+        # Select the location from the location name
+        location_found = False
+        for location in locations:
+            if ((location["name"] == location_name) and ((location["country"] == region) or (region == 'ICPAC'))):
+                location_found = True
+                break
+        if (not location_found):
+            print(f"ERROR: Location '{location_name}' is not in the list of locations.")
+            if (region != 'ICPAC'):
+                # A country is specified
+                print(f"       Searching in {region}. Perhaps try a different region.")
+            return
+    
+    else:  # latitude and longitude are specified
+        location = {"name":location_name,
+                    "country":"",
+                    "latitude":latitude,
+                    "longitude":longitude}
+
+    # Load the border shapefile
+    reader = shpreader.Reader("show_forecasts/shapes/GHA_shapes/gha.shp")
+    borders_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+
+    if (region != 'ICPAC') and (region != None):
+                    
+        # Load the regions shapefile
+        reader = shpreader.Reader(f"show_forecasts/shapes/{region}_shapes/{region}_region.cpg")
+        regions_feature = ShapelyFeature(reader.geometries(), ccrs.PlateCarree(), facecolor='none')
+        
+    # Get the extent of the region that we are looking at
+    region_extent = get_region_extent(region, border_size=0.5)
+
+    # Check that the point specified is within the region specified
+    if (pt_in_rect([location['longitude'], location['latitude']], region_extent) != True):
+        print(f'ERROR: Longitude and latitude specified is not in {region}.')
+        return
+
+    # Define the figure and axes
+    fig, ax = plt.subplots(nrows=1, ncols=1, subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(5,5))
+
+    ax.gridlines()
+    ax.set_facecolor('white')  # For consistency with Harris et. al 2022
+    ax.add_feature(cfeature.COASTLINE, linewidth=1)
+    if (region != 'ICPAC'):
+        if (region != 'Uganda'):  # Uganda counties are too complicated
+            ax.add_feature(regions_feature, linestyle=':')
+    ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+    ax.add_feature(borders_feature)  # The borders
+    ax.add_feature(cfeature.LAKES, linewidth=1,linestyle='-',edgecolor='dimgrey',facecolor='none')
+
+    # Plot the location
+    plt.plot(location['longitude'], location['latitude'], 'ro')
+
+    if (location_name != None):
+        if (location["country"] != ""):
+            ax.set_title(f"{location_name}, {location["country"]}", size=14)
+        else:
+            ax.set_title(f"{location_name}", size=14)
+
+    plt.tight_layout()  # Looks nicer
+
+    # Save the plot
+    if (file_name != None):
+        if file_name[-4:] in ['.png','.jpg','.pdf']:
+            plt.savefig(file_name, format=file_name[-3:], bbox_inches='tight')
+        else:
+            print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
+
+    plt.show()
+
+
 # Plot histograms from the ensemble values of rainfall at a specified location.
 # Arguments
 #   location_name     - The location name corresponding to a name in the list returned by print_locations().
@@ -432,7 +532,8 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
 #                       location is used instead of any named location in the list returned by
 #                       print_locations().
 #   plot_units='mm/h' - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
-def plot_GAN_local_histograms(data, location_name, country=None, latitude=None, longitude=None, plot_units='mm/h'):
+#   num_bins=10       - Number of evenly spaced bins in the histogram
+def plot_GAN_local_histograms(data, location_name, country=None, latitude=None, longitude=None, plot_units='mm/h', num_bins=10):
 
     if (((latitude == None) and (longitude != None)) or
         ((latitude != None) and (longitude == None))):
@@ -486,7 +587,7 @@ def plot_GAN_local_histograms(data, location_name, country=None, latitude=None, 
         # Plot the histogram
         ax = axs[idx]
         style = {'facecolor': 'tab:blue', 'edgecolor': 'black', 'linewidth': 1}
-        ax.hist(data['precipitation'][0,:,valid_time_idx,lat_idx,lon_idx].values * plot_norm, **style)
+        ax.hist(data['precipitation'][0,:,valid_time_idx,lat_idx,lon_idx].values * plot_norm, num_bins, **style)
         ax.grid()
         ax.set_xlabel(f'Rainfall ({plot_units})')
         ax.set_ylabel('Number of ensemble members')
