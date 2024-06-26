@@ -199,7 +199,7 @@ def plot_GAN_forecast(data, accumulation_time='6h', valid_time_start_hour='all',
         cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
         ax.set_title(f"Ensemble standard deviation",size=14)  # This plot's title
 
-        fig.suptitle(f"Jurre Brishti cGAN forecast: Valid {valid_time} - {valid_time + valid_time_delta} UTC")  # Overall title
+        fig.suptitle(f"Jurre Brishti cGAN forecast: Valid {valid_time.strftime("%Y-%m-%d %H:00")} to {(valid_time + valid_time_delta).strftime("%Y-%m-%d %H:00")} UTC")  # Overall title
         plt.tight_layout()  # Looks nicer
 
         # Save the plot
@@ -314,7 +314,7 @@ def plot_GAN_ensemble(data, valid_time_start_hour=6, style=None, plot_units='mm/
         cb.set_ticks(ticks=plot_levels*plot_norm, labels=cb_labels)
     cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
 
-    fig.suptitle(f"Jurre Brishti cGAN ensemble: Valid {valid_time} - {valid_time + timedelta(hours=6)} UTC")  # Overall title
+    fig.suptitle(f"Jurre Brishti cGAN ensemble: Valid {valid_time.strftime("%Y-%m-%d %H:00")} to {(valid_time + timedelta(hours=6)).strftime("%Y-%m-%d %H:00")} UTC")  # Overall title
 
     # Save the plot
     if (file_name != None):
@@ -430,7 +430,7 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
 
         c = ax.contourf(data['longitude'], data['latitude'], plot_data,
                         levels=plot_levels, transform=ccrs.PlateCarree(), colors=plot_colours)
-        ax.set_title(f"Valid {valid_time.time()} - {(valid_time + timedelta(hours=6)).time()}", size=14)
+        ax.set_title(f"Valid {valid_time.strftime("%H:00")} - {(valid_time + timedelta(hours=6)).strftime("%H:00")} UTC", size=14)
 
         cb = plt.colorbar(c, fraction=0.04)
         #cb.ax.tick_params(labelsize=18)
@@ -440,7 +440,7 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
         else:
             cb.set_ticks(ticks=plot_levels,labels=plot_level_names)
 
-    title_string = f"""Jurre Brishti cGAN ensemble: {first_valid_time.date()} - {(valid_time + timedelta(hours=6)).date()} UTC
+    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()}
     Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}."""
     fig.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
@@ -631,9 +631,9 @@ def plot_GAN_local_histograms(data, location_name, country=None, latitude=None, 
         ax.grid()
         ax.set_xlabel(f'Rainfall ({plot_units})')
         ax.set_ylabel('Number of ensemble members')
-        ax.set_title(f"Valid {valid_time.time()} - {(valid_time + timedelta(hours=6)).time()} UTC")
+        ax.set_title(f"Valid {valid_time.strftime("%H:00")} to {(valid_time + timedelta(hours=6)).strftime("%H:00")} UTC")
 
-    title_string = f"""Jurre Brishti cGAN ensemble {first_valid_time.date()} - {(valid_time + timedelta(hours=6)).date()} UTC
+    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()}
     {location["name"]}, {location["country"]} ({location["latitude"]:.4f}N, {location["longitude"]:.4f}E)"""
     plt.suptitle(title_string)  # Overall title    
     plt.tight_layout()  # Looks nicer
@@ -753,9 +753,9 @@ def plot_GAN_exceedance(data_sorted, probability=0.05, valid_time_start_hour=6, 
             cb_labels[-1] = ''  # Remove the final label
             cb.set_ticks(ticks=plot_levels*plot_norm, labels=cb_labels)
         cb.set_label(f'Rainfall ({plot_units})')  # Label the colorbar
-        ax.set_title(f"Valid {valid_time.strftime("%H:00")} - {(valid_time + timedelta(hours=6)).strftime("%H:00")} UTC", size=14)
+        ax.set_title(f"Valid {valid_time.strftime("%H:00")} to {(valid_time + timedelta(hours=6)).strftime("%H:00")} UTC", size=14)
 
-    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} - {(valid_time + timedelta(hours=6)).date()}
+    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()}
     {percentile*100:0g}% chance that rainfall is below this value."""
     fig.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
