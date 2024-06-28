@@ -16,6 +16,10 @@ from datetime import timedelta
 import xarray as xr
 from .data_utils import *
 
+from sklearn.datasets import make_blobs
+import xarray as xr
+from matplotlib.colors import from_levels_and_colors, BoundaryNorm, ListedColormap
+
 
 # Load a 24 hour mean forecast at a lead time of 30 to 54 hours
 # To be clear about the dates use print_forecast_info(forecast_init_date)
@@ -768,3 +772,99 @@ def plot_GAN_exceedance(data_sorted, probability=0.05, valid_time_start_hour=6, 
             print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
     plt.show()
+
+def get_probs(df, centre = [-1.25, 36.80], window_size = 0.3,bins = [0,20,50,70,100]):
+    
+    df_reg = df.sel({'lat':slice(centre[0]-window_size,centre[0]+window_size ),
+                     'lon':slice(centre[1]-window_size,centre[1]+window_size)})
+
+    lons, lats = np.meshgrid(df.lon.values,df.lat.values)
+    mask = xr.DataArray(data=np.zeros_like(lons), dims = ['lat', 'lon'], coords = {
+            "lat": (["lat"], df.lat.values, {"units": "degrees_north"}),
+            "lon": (["lon"], df.lon.values, {"units": "degrees_east"})}
+                               )
+    mask.loc[{'lat':df_reg.lat.values, 'lon':df_reg.lon.values}]=1
+
+    
+    df_reg = df_reg.max(['lat','lon']).groupby_bins('precipitation', bins).count()
+    
+    
+    return bins, df_reg.precipitation.values/np.nansum(df_reg.precipitation.values), mask
+
+def circle_plot(bins, counts, colours, n_size=100, date='2018-2023 April climatology'):
+
+    '''
+    Function to make probability plots of a given event
+
+    Input 
+    -----
+
+    X: ndarray(n_lower,n_upper)
+       lower and upper bounds for which probabilities are grouped
+
+    y: ndarray(len(X))
+       probabilities of each bin occurring in percentage
+
+    cmap: list of colors (len(X))
+          colours to use
+
+    Output
+    ------
+
+    Probability plot
+
+    '''
+
+    cmap = ListedColormap(colours)
+    #print(cmap.N)
+    norm = BoundaryNorm(bins+[1000], cmap.N)
+    
+    theta = np.linspace( 0 , 2 * np.pi , 150 )
+
+    radius = 2
+     
+    a = radius * np.cos( theta )
+    b = radius * np.sin( theta )
+    
+    fig = plt.figure(figsize=(8, 9))
+    plt.rcParams.update({"font.size": 10})
+    plt.rcParams.update({"mathtext.default": "regular"})
+
+    fs_title = 16
+
+    grid = plt.GridSpec(5, 3, wspace=0, hspace=0)  # create a grid for the subplots
+
+    ax = plt.subplot(grid[:4,:])
+    
+    ax.plot( a, b ,'k')
+
+    i_col=0
+    
+    for y in counts:
+
+        n_samples = int(y*n_size)
+        
+        R = 3
+
+        np.random.seed(1)
+        theta = np.random.uniform(0,2*np.pi, n_samples)+np.random.normal(0,0.5,n_samples)
+        radius = np.random.uniform(0,R, n_samples) ** 0.5+np.random.normal(0,0.1,n_samples)
+        
+        x = radius * np.cos(theta)
+        y = radius * np.sin(theta)
+
+        
+        plt.scatter(x, y, color=colours[i_col], marker="o", s=300, edgecolor='k')
+
+        i_col+=1
+    plt.title('Probability for Maximum Rainfall within region: %s'%date)
+    plt.axis('off')
+
+    ax_cbar = plt.subplot(grid[4:,:])
+    cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),
+            ax=ax_cbar, orientation='horizontal',aspect=50, ticks=bins)
+    cbar.ax.set_xlabel('Rainfall [mm/day]')
+
+    plt.axis('off')
+
+    
