@@ -21,6 +21,8 @@ from show_forecasts.data_utils import (
     get_plot_normalisation,
     get_contour_levels,
     datetime64_to_datetime,
+    pt_in_rect,
+    get_threshold_plot_colours,
 )
 from show_forecasts.constants import (
     COUNTRY_NAMES,
@@ -61,6 +63,29 @@ def load_GAN_forecast(
         file_path = f"{data_dir}/GAN_{d.year}{d.month:02}{d.day:02}.nc"
     data = xr.open_dataset(file_path)
     return data
+
+
+# Sorts the data along the ensemble axis. Used in percentile plots.
+# Arguments
+#   data                    - An xarray DataSet containing the cGAN rainfall forecasts.
+# Returns
+#   data_sorted             - A xarray DataSet containing the cGAN rainfall forecasts sorted along the
+#                             ensemble axis.
+def sort_along_ensemble_axis(data):
+
+    # Create a copy of the Dataset to hold the sorted data
+    data_sorted = data.copy()
+
+    # Find the axis to sort along
+    member_axis = data["precipitation"].get_axis_num("member")
+
+    # Sort values along the chosen axis
+    precip_sorted = np.sort(data["precipitation"], axis=member_axis)
+
+    # Copy the sorted data into the data_sorted Dataset
+    data_sorted["precipitation"].values = precip_sorted
+
+    return data_sorted
 
 
 # Plot the ensemble mean and ensemble standard deviation of the cGAN forecast data
@@ -105,21 +130,21 @@ def plot_GAN_forecast(
     shape_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
-    # be sure mask region is defined
-    region = region if region is not None else COUNTRY_NAMES[0]
 
     # Get the extent of the region that we are looking at
-    if region != COUNTRY_NAMES[0]:
+    if region != COUNTRY_NAMES[0] and region is not None:
         # load region of interest boundary layer
         reader = get_shape_boundary(shape_name=region)
         region_feature = ShapelyFeature(
             reader.geometries(), ccrs.PlateCarree(), facecolor="none"
         )
+        # Get extents of the region we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
 
     if accumulation_time == "6h":
 
         # Change valid_time_start_hour into the valid_time_idx
+        valid_time_start_hour = str(valid_time_start_hour)
         if valid_time_start_hour == "6":
             valid_time_idx_list = [0]
         elif valid_time_start_hour == "12":
@@ -184,7 +209,7 @@ def plot_GAN_forecast(
             facecolor="none",
         )
         ax.add_feature(shape_feature)  # EA region borders
-        if region != COUNTRY_NAMES[0]:
+        if region != COUNTRY_NAMES[0] and region is not None:
             ax.add_feature(region_feature, linestyle=":")
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         # Either plot 6h data or 24h data
@@ -236,7 +261,7 @@ def plot_GAN_forecast(
             facecolor="none",
         )
         ax.add_feature(shape_feature)  # EA region borders
-        if region != COUNTRY_NAMES[0]:
+        if region != COUNTRY_NAMES[0] and region is not None:
             ax.add_feature(region_feature, linestyle=":")
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         # Either plot 6h data or 24h data
@@ -285,7 +310,7 @@ def plot_GAN_forecast(
         ax.set_title(f"Ensemble standard deviation", size=14)  # This plot's title
 
         fig.suptitle(
-            f"Jurre Brishti cGAN forecast: Valid {valid_time} - {valid_time + valid_time_delta} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+            f"Jurre Brishti cGAN forecast: Valid {valid_time.strftime('%Y-%m-%d %H:00')} - {(valid_time + valid_time_delta).strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
         )  # Overall title
         plt.tight_layout()  # Looks nicer
 
@@ -313,8 +338,11 @@ def plot_GAN_forecast(
 #   valid_time_start_hour - The hour the valid time starts at. Can either be 6, 12, 18 or 0.
 #   style=None            - Options: 'ICPAC', 'ICPAC_heavy', 'KMD', 'EMI', 'EMI_heavy'
 #   plot_units='mm/h'     - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
-#   region='ICPAC'        - can be 'ICPAC', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
+#   region='East Africa'  - can be 'East Africa', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
 #                           'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
+#   max_num_plots=50      - Maximum number of ensemble members to plot.
+#   file_name=None        - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
+#                            plot is saved in that format.
 def plot_GAN_ensemble(
     data: xr.Dataset,
     valid_time_start_hour: str | None = "6",
@@ -323,9 +351,9 @@ def plot_GAN_ensemble(
     style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = "mm/h",
     region: str | None = COUNTRY_NAMES[0],
+    max_num_plots: int | None = 50,
     file_name: str | None = None,
 ):
-
     # Get the units to use for plotting
     plot_norm, plot_units = get_plot_normalisation(plot_units)
 
@@ -341,19 +369,18 @@ def plot_GAN_ensemble(
     shape_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
-    # be sure mask region is defined
-    region = region if region is not None else COUNTRY_NAMES[0]
-
     # Get the extent of the region that we are looking at
-    if region != COUNTRY_NAMES[0]:
+    if region != COUNTRY_NAMES[0] and region is not None:
         # load selected area of interest boundary
         reader = get_shape_boundary(shape_name=region)
         region_feature = ShapelyFeature(
             reader.geometries(), ccrs.PlateCarree(), facecolor="none"
         )
+        # Get extents of the region we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Change valid_time_start_hour into the valid_time_idx
+    valid_time_start_hour = str(valid_time_start_hour)
     if valid_time_start_hour == "6":
         valid_time_idx = 0
     elif valid_time_start_hour == "12":
@@ -371,20 +398,28 @@ def plot_GAN_ensemble(
         data["fcst_valid_time"][0, valid_time_idx].values
     )
 
+    # How many plots will we make
+    num_plots = np.min([max_num_plots, data["member"].size])
+    num_rows = int(np.ceil(num_plots / 5))
+
     # Define the figure and each axis for the rows and columns
     fig, axs = plt.subplots(
-        nrows=10,
+        nrows=num_rows,
         ncols=5,
         subplot_kw={"projection": ccrs.PlateCarree()},
-        figsize=(10, 25),
+        figsize=(10, 2.8 * num_rows + 0.9),
         layout="constrained",
     )
 
     # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
     axs = axs.flatten()
 
+    # Don't show axes without plots
+    for ax_idx in range(num_plots, num_rows * 5):
+        axs[ax_idx].set_axis_off()
+
     # For each ensemble member
-    for ax_idx in range(data["member"].size):
+    for ax_idx in range(num_plots):
 
         ax = axs[ax_idx]  # First plot (left)
         ax.add_feature(
@@ -398,7 +433,7 @@ def plot_GAN_ensemble(
             facecolor="none",
         )
         ax.add_feature(shape_feature)  # The EA region borders
-        if region != COUNTRY_NAMES[0]:
+        if region != COUNTRY_NAMES[0] and region is not None:
             ax.add_feature(region_feature, linestyle=":")
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         # Actually make the plot
@@ -431,7 +466,7 @@ def plot_GAN_ensemble(
     cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
 
     fig.suptitle(
-        f"Jurre Brishti cGAN ensemble: Valid {valid_time} - {valid_time + timedelta(hours=6)} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+        f"Jurre Brishti cGAN ensemble: Valid {valid_time.strftime('%Y-%m-%d %H:00')} - {(valid_time + timedelta(hours=6)).strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
 
     # Save the plot
@@ -452,14 +487,16 @@ def plot_GAN_ensemble(
 #   plot_units='mm/h'       - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
 #   valid_time_start_hour=6 - The hour the valid time starts at. Can either be 6, 12, 18 or 0 UTC,
 #                             or specify 'all' to make all four plots.
+#   style=None              - Options: 'ICPAC', 'KMD', 'EMI'
 #   show_percentages=False  - Either shows a description (False) or the percentage (True) of
 #                             the chance of exceeding the threshold.
-#   region='ICPAC'          - Can be 'ICPAC', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
+#   region='East Africa'    - Can be 'East Africa', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
 #                             'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
 #   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
 #                             plot is saved in that format.
 def plot_GAN_threshold_chance(
     data: xr.Dataset,
+    style: str | None = "ICPAC",
     threshold: str | None = 2,
     plot_units: str | None = "mm/h",
     valid_time_start_hour: int | None = 6,
@@ -482,10 +519,8 @@ def plot_GAN_threshold_chance(
     borders_feature = ShapelyFeature(
         reader.geometries(), ccrs.PlateCarree(), facecolor="none"
     )
-    # be sure mask region is defined
-    region = region if region is not None else COUNTRY_NAMES[0]
 
-    if region != COUNTRY_NAMES[0]:
+    if region != COUNTRY_NAMES[0] and region is not None:
 
         # Load the regions shapefile
         reader = get_shape_boundary(shape_name=region)
@@ -497,6 +532,7 @@ def plot_GAN_threshold_chance(
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Change valid_time_start_hour into the valid_time_idx
+    valid_time_start_hour = str(valid_time_start_hour)
     if valid_time_start_hour == "6":
         valid_time_idx_list = [0]
     elif valid_time_start_hour == "12":
@@ -539,6 +575,9 @@ def plot_GAN_threshold_chance(
         # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
         axs = axs.flatten()
 
+    # Define the plot colours
+    plot_colours = get_threshold_plot_colours(style)
+
     # There are plots for each valid time
     for idx, valid_time_idx in enumerate(valid_time_idx_list):
 
@@ -564,7 +603,7 @@ def plot_GAN_threshold_chance(
         ax.gridlines()
         ax.set_facecolor("white")  # For consistency with Harris et. al 2022
         ax.add_feature(cfeature.COASTLINE, linewidth=1)
-        if region != COUNTRY_NAMES[0]:
+        if region != COUNTRY_NAMES[0] and region is not None:
             ax.add_feature(regions_feature, linestyle=":")
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         ax.add_feature(borders_feature)  # The borders
@@ -582,13 +621,12 @@ def plot_GAN_threshold_chance(
             plot_data,
             levels=GAN_THRESHOLD_PLOT_LEVELS,
             transform=ccrs.PlateCarree(),
-            cmap="Blues",
+            colors=plot_colours,
         )
         ax.set_title(
-            f"Valid {valid_time.time()} - {(valid_time + timedelta(hours=6)).time()}",
+            f"Valid {valid_time.strftime('%H:00')} - {(valid_time + timedelta(hours=6)).strftime('%H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}",
             size=14,
         )
-
         cb = plt.colorbar(c, fraction=0.04)
         # cb.ax.tick_params(labelsize=18)
         if show_percentages:
@@ -616,6 +654,115 @@ def plot_GAN_threshold_chance(
     plt.show()
 
 
+# Draw a marker at a specific location.
+#   name=None               - An optional string containing the name of the point.
+#   latitude=None           - The latitude of the point.
+#   longitude=None          - The longitude of the point.
+#   region='East Africa'    - Can be 'East Africa', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
+#                             'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
+#   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
+#                             plot is saved in that format.
+def plot_location_marker(
+    location_name: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+    region: str | None = COUNTRY_NAMES[0],
+    file_name: str | None = None,
+):
+
+    if ((latitude == None) and (longitude != None)) or (
+        (latitude != None) and (longitude == None)
+    ):
+        print("ERROR: Either don't specify latitude and longitude or specify both.")
+        return
+
+    # lattiude and longitude are not specified
+    if (latitude == None) and (longitude == None):
+        # Select the location from the location name
+        location_found = False
+        for location in get_locations_data():
+            if (location["name"] == location_name) and (
+                (location["country"] == region) or (region == COUNTRY_NAMES[0])
+            ):
+                location_found = True
+                break
+        if not location_found:
+            print(f"ERROR: Location '{location_name}' is not in the list of locations.")
+            if region != COUNTRY_NAMES[0]:
+                # A country is specified
+                print(f"Searching in {region}. Perhaps try a different region.")
+            return
+
+    else:  # latitude and longitude are specified
+        location = {
+            "name": location_name,
+            "country": "",
+            "latitude": latitude,
+            "longitude": longitude,
+        }
+    # Load the border shapefile
+    reader = get_shape_boundary()
+    borders_feature = ShapelyFeature(
+        reader.geometries(), ccrs.PlateCarree(), facecolor="none"
+    )
+
+    if region != COUNTRY_NAMES[0] and region is not None:
+
+        # Load the regions shapefile
+        reader = get_shape_boundary(shape_name=region)
+        region_feature = ShapelyFeature(
+            reader.geometries(), ccrs.PlateCarree(), facecolor="none"
+        )
+
+        # Get the extent of the region that we are looking at
+        region_extent = get_region_extent(region, border_size=0.5)
+
+    # Check that the point specified is within the region specified
+    if pt_in_rect([location["longitude"], location["latitude"]], region_extent) != True:
+        print(f"ERROR: Longitude and latitude specified is not in {region}.")
+        return
+
+    # Define the figure and axes
+    fig, ax = plt.subplots(
+        nrows=1, ncols=1, subplot_kw={"projection": ccrs.PlateCarree()}, figsize=(5, 5)
+    )
+
+    ax.gridlines()
+    ax.set_facecolor("white")  # For consistency with Harris et. al 2022
+    ax.add_feature(cfeature.COASTLINE, linewidth=1)
+    if region != COUNTRY_NAMES[0] and region is not None:
+        ax.add_feature(region_feature, linestyle=":")
+        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+    ax.add_feature(borders_feature)  # The borders
+    ax.add_feature(
+        cfeature.LAKES,
+        linewidth=1,
+        linestyle="-",
+        edgecolor="dimgrey",
+        facecolor="none",
+    )
+
+    # Plot the location
+    plt.plot(location["longitude"], location["latitude"], "ro")
+
+    if location_name != None:
+        if location["country"] != "":
+            ax.set_title(f"{location_name}, {location['country']}", size=14)
+        else:
+            ax.set_title(f"{location_name}", size=14)
+
+    plt.tight_layout()  # Looks nicer
+
+    # Save the plot
+    if file_name != None:
+        if file_name[-4:] in [".png", ".jpg", ".pdf"]:
+            plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
+        else:
+            print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
+
+    plt.show()
+
+
 # Plot histograms from the ensemble values of rainfall at a specified location.
 # Arguments
 #   location_name     - The location name corresponding to a name in the list returned by print_locations().
@@ -629,6 +776,10 @@ def plot_GAN_threshold_chance(
 #                       location is used instead of any named location in the list returned by
 #                       print_locations().
 #   plot_units='mm/h' - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
+#   file_name=None    - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
+#                       plot is saved in that format.
+#   num_bins=10       - Number of evenly spaced bins in the histogram
+#   probability=None  - Plot a line indicating the amount of rain that will be exceeded with a given probability.
 def plot_GAN_local_histograms(
     data: xr.Dataset,
     location_name: str,
@@ -636,6 +787,8 @@ def plot_GAN_local_histograms(
     latitude: float | None = None,
     longitude: float | None = None,
     plot_units: str | None = "mm/h",
+    num_bins: int | None = 10,
+    probability: float | None = None,
     file_name: str | None = None,
 ):
 
@@ -698,24 +851,215 @@ def plot_GAN_local_histograms(
         if idx == 0:
             first_valid_time = valid_time
 
+        # The data to plot
+        plot_data = (
+            data["precipitation"][0, :, valid_time_idx, lat_idx, lon_idx].values
+            * plot_norm
+        )
+
         # Plot the histogram
         ax = axs[idx]
         style = {"facecolor": "tab:blue", "edgecolor": "black", "linewidth": 1}
-        ax.hist(
-            data["precipitation"][0, :, valid_time_idx, lat_idx, lon_idx].values
-            * plot_norm,
-            **style,
-        )
+        ax.hist(plot_data, num_bins, **style)
+
+        # The percentile specified
+        if probability != None:
+            # Convert the probability of excedence to a percentile and the corresponding percentile index
+            data_sorted = np.sort(plot_data)
+            percentile = 1 - probability
+            percentile_idx = int(np.floor(len(data_sorted) * percentile))
+            exceedance_value = np.sort(plot_data)[percentile_idx]
+            ax.axvline(
+                x=exceedance_value,
+                color="r",
+                label=f"{percentile*100:0g}%: {exceedance_value:.3g} {plot_units}",
+            )
+            ax.legend()
+
         ax.grid()
         ax.set_xlabel(f"Rainfall ({plot_units})")
         ax.set_ylabel("Number of ensemble members")
         ax.set_title(
-            f"Valid {valid_time.time()} - {(valid_time + timedelta(hours=6)).time()} UTC"
+            f"Valid {valid_time.strftime('%H:00')} to {(valid_time + timedelta(hours=6)).strftime('%H:00')} {getenv('DEFAULT_TIMEZONE','UTC')}"
         )
 
-    title_string = f"""Jurre Brishti cGAN ensemble {first_valid_time.date()} - {(valid_time + timedelta(hours=6)).date()} {getenv('DEFAULT_TIMEZONE','UTC')}
-    {location["name"]}, {location["country"]} ({location["latitude"]:.4f}N, {location["longitude"]:.4f}E)"""
+    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()} {getenv('DEFAULT_TIMEZONE','UTC')}
+    {location["name"]}, {location['country']} ({location["latitude"]:.4f}N, {location["longitude"]:.4f}E) """
     plt.suptitle(title_string)  # Overall title
+    plt.tight_layout()  # Looks nicer
+
+    # Save the plot
+    if file_name != None:
+        if file_name[-4:] in [".png", ".jpg", ".pdf"]:
+            plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
+    plt.show()
+
+
+# Plot the amount of rain that will be exceeded with a given probability.
+# Arguments
+#   data_sorted             - An xattay Dataset containing the cGAN rainfall forecasts sorted along the
+#                             ensemble axis.
+#   probability=0.05        - We'll plot the amount of rainfall at this threshold probability. The
+#                             default is 0.05 or 1/20. So by default there is a 1 in 20 chance of
+#                             rainfall above this value.
+#   valid_time_start_hour=6 - The hour the valid time starts at. Can either be 6, 12, 18 or 0 UTC,
+#                             or specify 'all' to make all four plots.
+#   style=None              - Options: 'ICPAC', 'KMD', 'EMI'
+#   plot_units='mm/h'       - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
+#   region='ICPAC'          - Can be 'ICPAC', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
+#                             'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
+#   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
+#                             plot is saved in that format.
+def plot_GAN_exceedance(
+    data_sorted,
+    probability: float | None = 0.05,
+    valid_time_start_hour: int | None = 6,
+    style: str | None = None,
+    plot_units: str | None = "mm/h",
+    region: str | None = COUNTRY_NAMES[0],
+    file_name: str | None = None,
+):
+
+    # Get the units to use for plotting
+    plot_norm, plot_units = get_plot_normalisation(plot_units)
+
+    # To be consistent with the Harris et. al paper.
+    value_range_precip = (0.1, 15 * plot_norm)
+
+    # Use a style other than the default
+    if style is not None:
+        plot_levels, plot_colours = get_contour_levels(style)
+
+    # Load the border shapefile
+    reader = get_shape_boundary()
+    borders_feature = ShapelyFeature(
+        reader.geometries(), ccrs.PlateCarree(), facecolor="none"
+    )
+
+    if region != COUNTRY_NAMES[0] and region is not None:
+
+        # Load the regions shapefile
+        reader = get_shape_boundary(shape_name=region)
+        regions_feature = ShapelyFeature(
+            reader.geometries(), ccrs.PlateCarree(), facecolor="none"
+        )
+
+        # Get the extent of the region that we are looking at
+        region_extent = get_region_extent(region, border_size=0.5)
+
+    # Change valid_time_start_hour into the valid_time_idx
+    valid_time_start_hour = str(valid_time_start_hour)
+    if valid_time_start_hour == "6":
+        valid_time_idx_list = [0]
+    elif valid_time_start_hour == "12":
+        valid_time_idx_list = [1]
+    elif valid_time_start_hour == "18":
+        valid_time_idx_list = [2]
+    elif valid_time_start_hour == "0":
+        valid_time_idx_list = [3]
+    elif valid_time_start_hour == "all":
+        valid_time_idx_list = np.arange(len(data_sorted["valid_time"]))
+    else:
+        print("ERROR: valid_time_start_hour must be 6, 12, 18 or 0 hours UTC or 'all'.")
+        return
+
+    # Convert the probability of excedence to a percentile and the corresponding percentile index
+    percentile = 1 - probability
+    percentile_idx = int(np.floor(len(data_sorted["member"]) * percentile))
+
+    if len(valid_time_idx_list) == 1:
+
+        # Define the figure and axes
+        fig, axs = plt.subplots(
+            nrows=1,
+            ncols=1,
+            subplot_kw={"projection": ccrs.PlateCarree()},
+            figsize=(5, 5),
+        )
+
+        # axs is a `GeoAxes`. Make it into a 1-D array
+        axs = [axs]
+
+    if len(valid_time_idx_list) == 4:
+
+        # Define the figure and axes
+        fig, axs = plt.subplots(
+            nrows=2,
+            ncols=2,
+            subplot_kw={"projection": ccrs.PlateCarree()},
+            figsize=(8, 8),
+        )
+
+        # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
+        axs = axs.flatten()
+
+    # There are plots for each valid time
+    for idx, valid_time_idx in enumerate(valid_time_idx_list):
+
+        # Convert the forecast valid time to a datetime.datetime format
+        valid_time = datetime64_to_datetime(
+            data_sorted["fcst_valid_time"][0, valid_time_idx].values
+        )
+
+        # Keep the first valid time for the plot title
+        if idx == 0:
+            first_valid_time = valid_time
+
+        # The rainfall at the given probability
+        data_to_plot = (
+            data_sorted["precipitation"][0, percentile_idx, valid_time_idx, :, :]
+            * plot_norm
+        )
+
+        ax = axs[idx]
+        ax.gridlines()
+        ax.set_facecolor("white")  # For consistency with Harris et. al 2022
+        ax.add_feature(cfeature.COASTLINE, linewidth=1)
+        if region != COUNTRY_NAMES[0] and region is not None:
+            ax.add_feature(regions_feature, linestyle=":")
+            ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+        ax.add_feature(borders_feature)  # The borders
+        ax.add_feature(
+            cfeature.LAKES,
+            linewidth=1,
+            linestyle="-",
+            edgecolor="dimgrey",
+            facecolor="none",
+        )
+
+        # Actually make the plot
+        if style == None:
+            c = ax.pcolormesh(
+                data_sorted["longitude"],
+                data_sorted["latitude"],
+                data_to_plot,
+                norm=colors.LogNorm(*value_range_precip),
+                cmap="YlGnBu",
+                transform=ccrs.PlateCarree(),
+            )
+            cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
+        else:
+            c = ax.contourf(
+                data_sorted["longitude"],
+                data_sorted["latitude"],
+                data_to_plot,
+                colors=plot_colours,
+                levels=plot_levels * plot_norm,
+                transform=ccrs.PlateCarree(),
+            )
+            cb = plt.colorbar(c, fraction=0.04)  # Add a colorbar with a nice size
+            cb_labels = np.round(plot_levels * plot_norm, 1).astype(str).tolist()
+            cb_labels[-1] = ""  # Remove the final label
+            cb.set_ticks(ticks=plot_levels * plot_norm, labels=cb_labels)
+        cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
+        ax.set_title(
+            f"Valid {valid_time.strftime('%H:00')} to {(valid_time + timedelta(hours=6)).strftime('%H:00')} UTC",
+            size=14,
+        )
+
+    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()}
+    {percentile*100:0g}% chance that rainfall is below this value."""
+    fig.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
 
     # Save the plot

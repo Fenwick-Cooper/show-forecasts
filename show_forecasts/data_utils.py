@@ -271,6 +271,97 @@ def get_contour_levels(style: str | None = "ICPAC"):
     return plot_levels, plot_colours
 
 
+# Returns the colours used for different styles of threshold plot
+# Options: None, 'ICPAC', 'KMD', 'EMI'
+def get_threshold_plot_colours(style):
+
+    if style == "ICPAC":
+
+        # ICPAC
+        # 228b22 rgb(34, 139, 34)    Above 200 mm/day
+        # 6cd403 rgb(108, 212, 3)    100-200 mm/day
+        # 00fe00 rgb(0, 254, 0)      50-100 mm/day
+        # caff70 rgb(202, 255, 112)  30-50 mm/day
+        # ffff00 rgb(255, 255, 0)    10-30 mm/day
+        # ffa500 rgb(255, 165, 0)    1-10 mm/day
+        # d9d9d9 rgb(217, 217, 217)  Less than 1 mm/day
+
+        plot_colours = [
+            [0.85098039, 0.85098039, 0.85098039, 1.0],
+            [1.0, 0.64705882, 0.0, 1.0],
+            [1.0, 1.0, 0.0, 1.0],
+            [0.0, 0.99607843, 0.0, 1.0],
+            [0.13333333, 0.54509804, 0.13333333, 1.0],
+        ]
+
+    elif style == "KMD":
+
+        # KMD
+        # 910000 rgb(145, 0, 0)      Above 100 mm/day
+        # ee0005 rgb(238, 0, 5)      80-100 mm/day
+        # ee6f01 rgb(238, 111, 1)    70-80 mm/day
+        # faa700 rgb(250, 167, 0)    60-70 mm/day
+        # ffc800 rgb(255, 200, 0)    50-60 mm/day
+        # 2481c5 rgb(36, 129, 197)   40-50 mm/day
+        # 45a7e6 rgb(69, 167, 230)   35-40 mm/day
+        # 8fc2e5 rgb(143, 194, 229)  30-35 mm/day
+        # b6d9fc rgb(182, 217, 252)  25-30 mm/day
+        # ccebfd rgb(204, 235, 253)  20-25 mm/day
+        # 1a8f1a rgb(26, 143, 26)    15-20 mm/day
+        # 2cba28 rgb(44, 186, 40)    10-15 mm/day
+        # 39d904 rgb(57, 217, 4)     5-10 mm/day
+        # 3ef600 rgb(62, 246, 0)     2-5 mm/day
+        # ffffff rgb(255, 255, 255)  Less than 1 mm/day
+
+        plot_colours = [
+            [1.0, 1.0, 1.0, 1.0],
+            [0.24313725, 0.96470588, 0.0, 1.0],
+            [0.14117647, 0.50588235, 0.77254902, 1.0],
+            [1.0, 0.78431373, 0.0, 1.0],
+            [0.93333333, 0.0, 0.01960784, 1.0],
+        ]
+
+    elif style == "EMI":
+
+        # EMI
+        # 228b22 rgb(34, 139, 34)    Above 100 mm/day
+        # 00ff00 rgb(0, 255, 0)      75-100 mm/day
+        # 66cd00 rgb(102, 205, 0)    50-75 mm/day
+        # 7fff00 rgb(127, 255, 0)    30-50 mm/day
+        # a2cd5a rgb(162, 205, 90)   20-30 mm/day
+        # caff70 rgb(202, 255, 112)  10-20 mm/day
+        # ffff00 rgb(255, 255, 0)    5-10 mm/day
+        # ffa500 rgb(255, 165, 0)    1-5 mm/day
+        # d9d9d9 rgb(217, 217, 217)  Less than 1 mm/day
+
+        plot_levels = (
+            np.array([0, 1, 5, 10, 20, 30, 50, 75, 100, 1000]) / 24
+        )  # Convert from mm/day to mm/h
+        plot_colours = [
+            [0.85098039, 0.85098039, 0.85098039, 1.0],
+            [1.0, 0.64705882, 0.0, 1.0],
+            [1.0, 1.0, 0.0, 1.0],
+            [0.63529412, 0.80392157, 0.35294118, 1.0],
+            [0.13333333, 0.54509804, 0.13333333, 1.0],
+        ]
+
+    else:
+
+        # From the default colour axis
+        plot_colours = [
+            [1.0, 1.0, 0.8509803921568627, 1.0],
+            [0.7781776239907728, 0.9128642829680892, 0.7060976547481739, 1.0],
+            [0.2526874279123414, 0.7114494425221068, 0.7683813917723953, 1.0],
+            [0.13361014994232986, 0.3647520184544406, 0.6569780853517878, 1.0],
+            [0.03137254901960784, 0.11372549019607843, 0.34509803921568627, 1.0],
+        ]
+
+        if style != None:
+            print(f"WARNING: Unknown style {style}.")
+
+    return plot_colours
+
+
 # Convert numpy.datetime64 to datetime
 # Arguments
 #    datetime64 - A single date stored in a datetime64 object.
@@ -303,3 +394,18 @@ def print_locations(country=None):
             print(
                 f"{locations[i]['name']}, {locations[i]['country']}, ({locations[i]['latitude']}N, {locations[i]['longitude']}E)"
             )
+
+
+# Is a point in a rectangle
+# Arguments
+#   pt - A two element list or array of numbers representing a point.
+#   rect - A four elememnt list or array of numbers representing a rectangle: [left, right, bottom, top]
+# Returns
+#   True if the point is in the rectangle or False if it isn't.
+def pt_in_rect(pt, rect):
+    return (
+        (pt[0] >= rect[0])
+        and (pt[0] <= rect[1])
+        and (pt[1] >= rect[2])
+        and (pt[1] <= rect[3])
+    )

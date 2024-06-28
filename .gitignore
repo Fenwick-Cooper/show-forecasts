@@ -1,4 +1,8 @@
-__pycache__
-.env
-data
+*.env
+*.pyc
 *.log
+__pycache__
+data
+store
+logs
+.vscode
