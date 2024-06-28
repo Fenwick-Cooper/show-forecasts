@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "show-forecasts"
+version = "0.1.0"
+description = "cGAN forecasts post-processing and visualization scripts"
+authors = ["Fenwick <fenwick.cooper@physics.ox.ac.uk>", "Jason <Jason.Kinyua@igad.int>"]
+license = "CC BY 4.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+numpy = "1.26.4"
+pandas = "^2.2.1"
+Cartopy = "^0.22.0"
+matplotlib = "^3.8.3"
+cfgrib = "^0.9.10.4"
+xarray = {extras = ["io", "viz"], version = "^2024.2.0"}
+eccodes = "^1.7.0"
+netcdf4 = "^1.6.5"
+pyshp = "^2.3.1"
+ipykernel = "^6.29.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
