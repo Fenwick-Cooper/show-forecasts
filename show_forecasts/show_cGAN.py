@@ -430,7 +430,7 @@ def plot_GAN_threshold_chance(data, threshold=2, plot_units='mm/h', valid_time_s
 
         c = ax.contourf(data['longitude'], data['latitude'], plot_data,
                         levels=plot_levels, transform=ccrs.PlateCarree(), colors=plot_colours)
-        ax.set_title(f"Valid {valid_time.strftime("%H:00")} - {(valid_time + timedelta(hours=6)).strftime("%H:00")} UTC", size=14)
+        ax.set_title(f"Valid {valid_time.strftime('%H:00')} - {(valid_time + timedelta(hours=6)).strftime('%H:00')} UTC", size=14)
 
         cb = plt.colorbar(c, fraction=0.04)
         #cb.ax.tick_params(labelsize=18)
@@ -527,7 +527,7 @@ def plot_location_marker(location_name=None, latitude=None, longitude=None, regi
 
     if (location_name != None):
         if (location["country"] != ""):
-            ax.set_title(f"{location_name}, {location["country"]}", size=14)
+            ax.set_title(f"{location_name}, {location['country']}", size=14)
         else:
             ax.set_title(f"{location_name}", size=14)
 
@@ -559,7 +559,7 @@ def plot_location_marker(location_name=None, latitude=None, longitude=None, regi
 #   num_bins=10       - Number of evenly spaced bins in the histogram
 #   probability=None  - Plot a line indicating the amount of rain that will be exceeded with a given probability.
 def plot_GAN_local_histograms(data, location_name, country=None, latitude=None, longitude=None, plot_units='mm/h',
-                              num_bins=10, probability=None):
+                              num_bins=10, probability=None, file_name=None):
 
     if (((latitude == None) and (longitude != None)) or
         ((latitude != None) and (longitude == None))):
@@ -637,6 +637,14 @@ def plot_GAN_local_histograms(data, location_name, country=None, latitude=None, 
     {location["name"]}, {location["country"]} ({location["latitude"]:.4f}N, {location["longitude"]:.4f}E)"""
     plt.suptitle(title_string)  # Overall title    
     plt.tight_layout()  # Looks nicer
+    
+    # Save the plot
+    if (file_name != None):
+        if file_name[-4:] in ['.png','.jpg','.pdf']:
+            plt.savefig(file_name, format=file_name[-3:], bbox_inches='tight')
+        else:
+            print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
+    
     plt.show()
 
 
