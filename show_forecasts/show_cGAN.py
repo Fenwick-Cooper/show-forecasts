@@ -310,7 +310,7 @@ def plot_GAN_forecast(
         ax.set_title(f"Ensemble standard deviation", size=14)  # This plot's title
 
         fig.suptitle(
-            f"Jurre Brishti cGAN forecast: Valid {valid_time.strftime('%Y-%m-%d %H:00')} - {(valid_time + valid_time_delta).strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+            f"Jurre Brishti cGAN forecast: Valid {valid_time.strftime('%Y-%m-%d %H:00')} to {(valid_time + valid_time_delta).strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
         )  # Overall title
         plt.tight_layout()  # Looks nicer
 
@@ -418,6 +418,10 @@ def plot_GAN_ensemble(
     for ax_idx in range(num_plots, num_rows * 5):
         axs[ax_idx].set_axis_off()
 
+    # Don't show axes without plots
+    for ax_idx in range(num_plots, num_rows * 5):
+        axs[ax_idx].set_axis_off()
+
     # For each ensemble member
     for ax_idx in range(num_plots):
 
@@ -466,7 +470,7 @@ def plot_GAN_ensemble(
     cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
 
     fig.suptitle(
-        f"Jurre Brishti cGAN ensemble: Valid {valid_time.strftime('%Y-%m-%d %H:00')} - {(valid_time + timedelta(hours=6)).strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+        f"Jurre Brishti cGAN ensemble: Valid {valid_time.strftime('%Y-%m-%d %H:00')} to {(valid_time + timedelta(hours=6)).strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
 
     # Save the plot
@@ -578,6 +582,9 @@ def plot_GAN_threshold_chance(
     # Define the plot colours
     plot_colours = get_threshold_plot_colours(style)
 
+    # Define the plot colours
+    plot_colours = get_threshold_plot_colours(style)
+
     # There are plots for each valid time
     for idx, valid_time_idx in enumerate(valid_time_idx_list):
 
@@ -614,7 +621,6 @@ def plot_GAN_threshold_chance(
             edgecolor="dimgrey",
             facecolor="none",
         )
-
         c = ax.contourf(
             data["longitude"],
             data["latitude"],
@@ -637,10 +643,9 @@ def plot_GAN_threshold_chance(
                 ticks=GAN_THRESHOLD_PLOT_LEVELS, labels=GAN_THRESHOLD_PLOT_LEVEL_NAMES
             )
 
-    title_string = f"""
-    Jurre Brishti cGAN ensemble: {first_valid_time.date()} - {(valid_time + timedelta(hours=6)).date()} {getenv('DEFAULT_TIMEZONE', 'UTC')}
-    Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}.
-    """
+    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()}
+    Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}."""
+
     fig.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
 
@@ -732,6 +737,112 @@ def plot_location_marker(
     ax.add_feature(cfeature.COASTLINE, linewidth=1)
     if region != COUNTRY_NAMES[0] and region is not None:
         ax.add_feature(region_feature, linestyle=":")
+        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+    ax.add_feature(borders_feature)  # The borders
+    ax.add_feature(
+        cfeature.LAKES,
+        linewidth=1,
+        linestyle="-",
+        edgecolor="dimgrey",
+        facecolor="none",
+    )
+
+    # Plot the location
+    plt.plot(location["longitude"], location["latitude"], "ro")
+
+    if location_name != None:
+        if location["country"] != "":
+            ax.set_title(f"{location_name}, {location['country']}", size=14)
+        else:
+            ax.set_title(f"{location_name}", size=14)
+
+    plt.tight_layout()  # Looks nicer
+
+    # Save the plot
+    if file_name != None:
+        if file_name[-4:] in [".png", ".jpg", ".pdf"]:
+            plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
+        else:
+            print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
+
+    plt.show()
+
+
+# Draw a marker at a specific location.
+#   name=None               - An optional string containing the name of the point.
+#   latitude=None           - The latitude of the point.
+#   longitude=None          - The longitude of the point.
+#   region='ICPAC'          - Can be 'ICPAC', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
+#                             'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
+#   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
+#                             plot is saved in that format.
+def plot_location_marker(
+    location_name=None, latitude=None, longitude=None, region="ICPAC", file_name=None
+):
+
+    if ((latitude == None) and (longitude != None)) or (
+        (latitude != None) and (longitude == None)
+    ):
+        print("ERROR: Either don't specify latitude and longitude or specify both.")
+        return
+
+    # lattiude and longitude are not specified
+    if (latitude == None) and (longitude == None):
+        # Select the location from the location name
+        location_found = False
+        for location in get_locations_data():
+            if (location["name"] == location_name) and (
+                (location["country"] == region) or (region == "ICPAC")
+            ):
+                location_found = True
+                break
+        if not location_found:
+            print(f"ERROR: Location '{location_name}' is not in the list of locations.")
+            if region != "ICPAC":
+                # A country is specified
+                print(f"       Searching in {region}. Perhaps try a different region.")
+            return
+
+    else:  # latitude and longitude are specified
+        location = {
+            "name": location_name,
+            "country": "",
+            "latitude": latitude,
+            "longitude": longitude,
+        }
+
+    # Load the border shapefile
+    reader = get_shape_boundary()
+    borders_feature = ShapelyFeature(
+        reader.geometries(), ccrs.PlateCarree(), facecolor="none"
+    )
+
+    if region != COUNTRY_NAMES[0] and region is not None:
+
+        # Load the regions shapefile
+        reader = get_shape_boundary(shape_name=region)
+        regions_feature = ShapelyFeature(
+            reader.geometries(), ccrs.PlateCarree(), facecolor="none"
+        )
+
+        # Get the extent of the region that we are looking at
+        region_extent = get_region_extent(region, border_size=0.5)
+
+    # Check that the point specified is within the region specified
+    if pt_in_rect([location["longitude"], location["latitude"]], region_extent) != True:
+        print(f"ERROR: Longitude and latitude specified is not in {region}.")
+        return
+
+    # Define the figure and axes
+    fig, ax = plt.subplots(
+        nrows=1, ncols=1, subplot_kw={"projection": ccrs.PlateCarree()}, figsize=(5, 5)
+    )
+
+    ax.gridlines()
+    ax.set_facecolor("white")  # For consistency with Harris et. al 2022
+    ax.add_feature(cfeature.COASTLINE, linewidth=1)
+    if region != COUNTRY_NAMES[0] and region is not None:
+        ax.add_feature(regions_feature, linestyle=":")
         ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     ax.add_feature(borders_feature)  # The borders
     ax.add_feature(
@@ -883,7 +994,7 @@ def plot_GAN_local_histograms(
             f"Valid {valid_time.strftime('%H:00')} to {(valid_time + timedelta(hours=6)).strftime('%H:00')} {getenv('DEFAULT_TIMEZONE','UTC')}"
         )
 
-    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()} {getenv('DEFAULT_TIMEZONE','UTC')}
+    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()}
     {location["name"]}, {location['country']} ({location["latitude"]:.4f}N, {location["longitude"]:.4f}E) """
     plt.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
@@ -892,6 +1003,9 @@ def plot_GAN_local_histograms(
     if file_name != None:
         if file_name[-4:] in [".png", ".jpg", ".pdf"]:
             plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
+        else:
+            print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
+
     plt.show()
 
 
@@ -1053,7 +1167,7 @@ def plot_GAN_exceedance(
             cb.set_ticks(ticks=plot_levels * plot_norm, labels=cb_labels)
         cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
         ax.set_title(
-            f"Valid {valid_time.strftime('%H:00')} to {(valid_time + timedelta(hours=6)).strftime('%H:00')} UTC",
+            f"Valid {valid_time.strftime('%H:00')} to {(valid_time + timedelta(hours=6)).strftime('%H:00')} {getenv('DEFAULT_TIMEZONE','UTC')}",
             size=14,
         )
 

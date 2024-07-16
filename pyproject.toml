@@ -15,7 +15,7 @@ matplotlib = "^3.8.3"
 cfgrib = "^0.9.10.4"
 xarray = {extras = ["io", "viz"], version = "^2024.2.0"}
 eccodes = "^1.7.0"
-netcdf4 = "^1.6.5"
+netcdf4 = "^1.7.1.post1"
 pyshp = "^2.3.1"
 ipykernel = "^6.29.4"
 
