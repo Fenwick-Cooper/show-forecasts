@@ -344,6 +344,8 @@ def plot_forecast(
     style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = None,
     region: str | None = COUNTRY_NAMES[0],
+    file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
     # be sure region is defined
     region = region if region is not None else COUNTRY_NAMES[0]
@@ -509,7 +511,14 @@ def plot_forecast(
         f"IFS {data.attrs['name']}: Valid {valid_time} - {valid_time + timedelta(days=1)} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
     plt.tight_layout()  # Looks nicer
-    plt.show()  # Finally draw the plot
+    # Save the plot
+    if file_name != None:
+        if file_name[-4:] in [".png", ".jpg", ".pdf"]:
+            plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
+        else:
+            print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
+    if show_plot:
+        plt.show()  # Finally draw the plot
 
 
 def plot_forecast_ensemble(
@@ -519,6 +528,8 @@ def plot_forecast_ensemble(
     style: str | None = COLOR_SCHEMES[0],
     plot_units: str | None = None,
     region: str | None = COUNTRY_NAMES[0],
+    file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
 
     # be sure region is defined
@@ -656,7 +667,15 @@ def plot_forecast_ensemble(
     fig.suptitle(
         f"IFS ensemble: Valid {valid_time} - {valid_time + timedelta(days=1)} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
-    plt.show()  # Finally draw the plot
+    # Save the plot
+    if file_name != None:
+        if file_name[-4:] in [".png", ".jpg", ".pdf"]:
+            plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
+        else:
+            print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
+
+    if show_plot:
+        plt.show()  # Finally draw the plot
 
 
 # Some info to be clear with dates and times

@@ -70,6 +70,7 @@ COUNTRY_NAMES = [
 
 ACCUMULATION_UNITS = ["mm/h", "mm/6h", "mm/day", "mm/week"]
 ACCUMULATION_TIME = ["6h", "24h"]
+# ACCUMULATION_TIME = ["1h", "6h", "24h", "7d"]
 VALID_TIME_START_HOUR = ["6", "12", "18", "0", "all"]
 
 

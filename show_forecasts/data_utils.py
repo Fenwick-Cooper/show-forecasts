@@ -39,7 +39,7 @@ def load_env_file(
 
 # A list of the locations that can be specified
 def get_locations_data() -> list[Dict[str, str]]:
-    data_file = f"{os.getenv('APP_DIR', '.')}/shapefiles/locations.json"
+    data_file = f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/locations.json"
     with open(data_file, "r") as jf:
         return json.loads(jf.read())
 
@@ -50,11 +50,11 @@ def get_shape_boundary(
     # Get the shapefile
     try:
         return shpreader.Reader(
-            f"{os.getenv('APP_DIR', '.')}/shapefiles/{shape_name}.shp"
+            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{shape_name}.shp"
         )
     except Exception:
         return shpreader.Reader(
-            f"{os.getenv('APP_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
+            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
         )
 
 
@@ -92,17 +92,17 @@ def get_region_extent(
 ):
     try:
         sf = shapefile.Reader(
-            f"{os.getenv('APP_DIR', '.')}/shapefiles/{shape_name}.shp"
+            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{shape_name}.shp"
         )
     except Exception:
         sf = shapefile.Reader(
-            f"{os.getenv('APP_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
+            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
         )
     # find boundary index
     if (
         shape_name != COUNTRY_NAMES[0]
         and not Path(
-            f"{os.getenv('APP_DIR', '.')}/shapefiles/{shape_name}.shp"
+            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{shape_name}.shp"
         ).exists()
     ):
         shape_index = [
@@ -382,7 +382,7 @@ def datetime64_to_datetime(datetime64):
 #                  'Burundi', 'Djibouti', 'Eritrea', 'Ethiopia', 'Sudan', 'Somalia',
 #                  'Tanzania', 'Uganda'
 def print_locations(country=None):
-    with open(f"{os.getenv('APP_DIR','.')}/shapefiles/locations.json") as jf:
+    with open(f"{os.getenv('PACKAGE_DIR','.')}/shapefiles/locations.json") as jf:
         locations = json.loads(jf.read())
 
     for i in range(len(locations)):

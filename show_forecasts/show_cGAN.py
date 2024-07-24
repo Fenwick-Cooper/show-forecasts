@@ -113,6 +113,7 @@ def plot_GAN_forecast(
     plot_units: str | None = "mm/h",
     region: str | None = COUNTRY_NAMES[0],
     file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
 
     # Get the units to use for plotting
@@ -329,7 +330,8 @@ def plot_GAN_forecast(
             else:
                 print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
-        plt.show()  # Finally draw the plot
+        if show_plot:
+            plt.show()  # Finally draw the plot
 
 
 # Plot all ensemble members in the cGAN forecast data at a specified valid time.
@@ -353,6 +355,7 @@ def plot_GAN_ensemble(
     region: str | None = COUNTRY_NAMES[0],
     max_num_plots: int | None = 50,
     file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
     # Get the units to use for plotting
     plot_norm, plot_units = get_plot_normalisation(plot_units)
@@ -480,7 +483,8 @@ def plot_GAN_ensemble(
         else:
             print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
-    plt.show()  # Finally draw the plot
+    if show_plot:
+        plt.show()  # Finally draw the plot
 
 
 # Plot the chance of rainfall at a rate above a specified threshold.
@@ -507,6 +511,7 @@ def plot_GAN_threshold_chance(
     show_percentages: bool | None = False,
     region: str | None = COUNTRY_NAMES[0],
     file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
 
     # Get the units to use for plotting
@@ -656,7 +661,8 @@ def plot_GAN_threshold_chance(
         else:
             print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
-    plt.show()
+    if show_plot:
+        plt.show()
 
 
 # Draw a marker at a specific location.
@@ -673,6 +679,7 @@ def plot_location_marker(
     longitude: float | None = None,
     region: str | None = COUNTRY_NAMES[0],
     file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
 
     if ((latitude == None) and (longitude != None)) or (
@@ -765,7 +772,8 @@ def plot_location_marker(
         else:
             print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
-    plt.show()
+    if show_plot:
+        plt.show()
 
 
 # Draw a marker at a specific location.
@@ -777,7 +785,12 @@ def plot_location_marker(
 #   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
 #                             plot is saved in that format.
 def plot_location_marker(
-    location_name=None, latitude=None, longitude=None, region="ICPAC", file_name=None
+    location_name: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+    region: str | None = "ICPAC",
+    file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
 
     if ((latitude == None) and (longitude != None)) or (
@@ -871,7 +884,8 @@ def plot_location_marker(
         else:
             print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
-    plt.show()
+    if show_plot:
+        plt.show()
 
 
 # Plot histograms from the ensemble values of rainfall at a specified location.
@@ -901,6 +915,7 @@ def plot_GAN_local_histograms(
     num_bins: int | None = 10,
     probability: float | None = None,
     file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
 
     if ((latitude == None) and (longitude != None)) or (
@@ -1006,7 +1021,8 @@ def plot_GAN_local_histograms(
         else:
             print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
-    plt.show()
+    if show_plot:
+        plt.show()
 
 
 # Plot the amount of rain that will be exceeded with a given probability.
@@ -1032,6 +1048,7 @@ def plot_GAN_exceedance(
     plot_units: str | None = "mm/h",
     region: str | None = COUNTRY_NAMES[0],
     file_name: str | None = None,
+    show_plot: bool | None = True,
 ):
 
     # Get the units to use for plotting
@@ -1183,4 +1200,5 @@ def plot_GAN_exceedance(
         else:
             print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
-    plt.show()
+    if show_plot:
+        plt.show()
