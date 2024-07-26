@@ -166,7 +166,7 @@ def plot_GAN_forecast(
 
     elif accumulation_time == "24h":
 
-        if (str(valid_time_start_hour) != "0") and (valid_time_start_hour != "all"):
+        if (valid_time_start_hour != "0") and (valid_time_start_hour != "all"):
             print(
                 "ERROR: valid_time_start_hour must be 0 when accumulation_time is '24h'."
             )
@@ -726,8 +726,8 @@ def plot_location_marker(
             reader.geometries(), ccrs.PlateCarree(), facecolor="none"
         )
 
-        # Get the extent of the region that we are looking at
-        region_extent = get_region_extent(region, border_size=0.5)
+    # Get the extent of the region that we are looking at
+    region_extent = get_region_extent(region, border_size=0.5)
 
     # Check that the point specified is within the region specified
     if pt_in_rect([location["longitude"], location["latitude"]], region_extent) != True:
@@ -744,7 +744,7 @@ def plot_location_marker(
     ax.add_feature(cfeature.COASTLINE, linewidth=1)
     if region != COUNTRY_NAMES[0] and region is not None:
         ax.add_feature(region_feature, linestyle=":")
-        ax.set_extent(region_extent, crs=ccrs.PlateCarree())
+    ax.set_extent(region_extent, crs=ccrs.PlateCarree())
     ax.add_feature(borders_feature)  # The borders
     ax.add_feature(
         cfeature.LAKES,
@@ -1041,7 +1041,7 @@ def plot_GAN_local_histograms(
 #   file_name=None          - If a file name, ending in '.png', '.jpg' or '.pdf' is specified, the
 #                             plot is saved in that format.
 def plot_GAN_exceedance(
-    data_sorted,
+    data_sorted: xr.Dataset,
     probability: float | None = 0.05,
     valid_time_start_hour: int | None = 6,
     style: str | None = None,
