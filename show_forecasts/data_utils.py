@@ -7,16 +7,21 @@ from pathlib import Path
 from typing import Dict
 from show_forecasts.constants import COUNTRY_NAMES
 
+def get_package_base_dir():
+    current_file_dir = os.path.dirname(os.path.realpath(__file__))
+    return os.path.abspath(f"{current_file_dir}/../")
+
 
 def load_env_file(
-    dotenv_path: Path | None = Path("./.env"), override: bool | None = False
+    dotenv_path: str | None = None, override: bool | None = False
 ):
-    if not dotenv_path.exists():
+    dotenv_path = dotenv_path if dotenv_path is not None else os.path.join(get_package_base_dir(), ".env")
+    if not Path(dotenv_path).exists():
         print(
-            f"WARNING: .env file dows not exist. Skipping loading of environment variables."
+            f"WARNING: .env file does not exist. Skipping loading of environment variables."
         )
     else:
-        print(f"INFO: Loading environment variables from {dotenv_path.absolute()}")
+        print(f"INFO: Loading environment variables from {dotenv_path}")
         with open(dotenv_path, "r") as fp:
             lines = fp.read().splitlines()  # make a list of lines using brak marks (\n)
         # process values from .env
@@ -39,7 +44,7 @@ def load_env_file(
 
 # A list of the locations that can be specified
 def get_locations_data() -> list[Dict[str, str]]:
-    data_file = f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/locations.json"
+    data_file = f"{os.getenv('PACKAGE_DIR', get_package_base_dir())}/shapefiles/locations.json"
     with open(data_file, "r") as jf:
         return json.loads(jf.read())
 
@@ -50,11 +55,11 @@ def get_shape_boundary(
     # Get the shapefile
     try:
         return shpreader.Reader(
-            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{shape_name}.shp"
+            f"{os.getenv('PACKAGE_DIR', get_package_base_dir())}/shapefiles/{shape_name}.shp"
         )
     except Exception:
         return shpreader.Reader(
-            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
+            f"{os.getenv('PACKAGE_DIR', get_package_base_dir())}/shapefiles/{COUNTRY_NAMES[0]}.shp"
         )
 
 
@@ -92,17 +97,17 @@ def get_region_extent(
 ):
     try:
         sf = shapefile.Reader(
-            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{shape_name}.shp"
+            f"{os.getenv('PACKAGE_DIR', get_package_base_dir())}/shapefiles/{shape_name}.shp"
         )
     except Exception:
         sf = shapefile.Reader(
-            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{COUNTRY_NAMES[0]}.shp"
+            f"{os.getenv('PACKAGE_DIR', get_package_base_dir())}/shapefiles/{COUNTRY_NAMES[0]}.shp"
         )
     # find boundary index
     if (
         shape_name != COUNTRY_NAMES[0]
         and not Path(
-            f"{os.getenv('PACKAGE_DIR', '.')}/shapefiles/{shape_name}.shp"
+            f"{os.getenv('PACKAGE_DIR', get_package_base_dir())}/shapefiles/{shape_name}.shp"
         ).exists()
     ):
         shape_index = [
@@ -382,7 +387,7 @@ def datetime64_to_datetime(datetime64):
 #                  'Burundi', 'Djibouti', 'Eritrea', 'Ethiopia', 'Sudan', 'Somalia',
 #                  'Tanzania', 'Uganda'
 def print_locations(country=None):
-    with open(f"{os.getenv('PACKAGE_DIR','.')}/shapefiles/locations.json") as jf:
+    with open(f"{os.getenv('PACKAGE_DIR',get_package_base_dir())}/shapefiles/locations.json") as jf:
         locations = json.loads(jf.read())
 
     for i in range(len(locations)):
