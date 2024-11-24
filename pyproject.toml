@@ -14,7 +14,7 @@ Cartopy = "^0.24.1"
 matplotlib = "^3.9.2"
 cfgrib = "^0.9.10.4"
 xarray = {extras = ["io", "viz"], version = "^2024.11.0"}
-eccodes = "^2.38.3"
+eccodes = "2.38.3"
 netcdf4 = "^1.7.2"
 pyshp = "^2.3.1"
 ipykernel = "^6.29.5"
