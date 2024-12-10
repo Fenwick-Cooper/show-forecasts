@@ -841,10 +841,10 @@ def plot_location_marker(
         # Get the extent of the region that we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
 
-    # Check that the point specified is within the region specified
-    if pt_in_rect([location["longitude"], location["latitude"]], region_extent) != True:
-        print(f"ERROR: Longitude and latitude specified is not in {region}.")
-        return
+        # Check that the point specified is within the region specified
+        if pt_in_rect([location["longitude"], location["latitude"]], region_extent) != True:
+            print(f"ERROR: Longitude and latitude specified is not in {region}.")
+            return
 
     # Define the figure and axes
     fig, ax = plt.subplots(
