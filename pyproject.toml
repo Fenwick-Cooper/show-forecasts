@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "show-forecasts"
-version = "0.1.6"
+version = "0.1.7"
 description = "cGAN forecasts post-processing and visualization scripts"
 authors = [
     "Fenwick <fenwick.cooper@physics.ox.ac.uk>",
@@ -19,7 +19,7 @@ Cartopy = "^0.24.1"
 matplotlib = "^3.9.2"
 cfgrib = "^0.9.10.4"
 xarray = { extras = ["io", "viz"], version = "^2024.11.0" }
-eccodes = "2.38.3"
+eccodes = "^2.39.1"
 netcdf4 = "^1.7.2"
 pyshp = "^2.3.1"
 ipykernel = "^6.29.5"
