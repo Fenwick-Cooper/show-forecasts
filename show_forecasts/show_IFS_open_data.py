@@ -161,7 +161,7 @@ def load_ifs_forecast_from_grib2(
         # Get the DataArray corresponding to the key. 'number' ensures that we pick the ensemble forecast.
         if key == "wind":
             da_u10 = DataArray_from_Dataset_list(ds, "u10", dimensions="number")
-            da_v10 = DataArray_from_Dataset_list(ds, "u10", dimensions="number")
+            da_v10 = DataArray_from_Dataset_list(ds, "v10", dimensions="number")
             # We want the average wind speed, not the average air velocity.
             data_3h = np.sqrt(
                 da_u10[:, 261:416, 796:938] ** 2 + da_v10[:, 261:416, 796:938] ** 2
