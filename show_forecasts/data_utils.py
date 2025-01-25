@@ -1,6 +1,8 @@
 # Utility functions and data used internally for processing forecasts
 import numpy as np
-import shapefile, json, os
+import shapefile
+import json
+import os
 import cartopy.io.shapereader as shpreader
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,7 +23,7 @@ def load_env_file(dotenv_path: str | None = None, override: bool | None = False)
     )
     if not Path(dotenv_path).exists():
         print(
-            f"WARNING: .env file does not exist. Skipping loading of environment variables."
+            "WARNING: .env file does not exist. Skipping loading of environment variables."
         )
     else:
         print(f"INFO: Loading environment variables from {dotenv_path}")
@@ -42,7 +44,7 @@ def load_env_file(dotenv_path: str | None = None, override: bool | None = False)
         else:
             for key, value in env_vars.items():
                 os.environ.setdefault(key, value)
-        print(f"INFO: loaded settings from environment variables!")
+        print("INFO: loaded settings from environment variables!")
 
 
 # A list of the locations that can be specified
@@ -83,8 +85,8 @@ def get_plot_normalisation(plot_units: str):
         plot_norm = 7 * 24
     else:
         print(f"ERROR: Unknown plot units '{plot_units}'.")
-        print(f"       Options are 'mm/h', 'mm/6h', 'mm/day', 'mm/week'.")
-        print(f"       Selecting 'mm/h'.")
+        print("Options are 'mm/h', 'mm/6h', 'mm/day', 'mm/week'.")
+        print("Selecting 'mm/h'.")
         plot_norm = 1
         plot_units = "mm/h"
     return plot_norm, plot_units

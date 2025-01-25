@@ -44,23 +44,25 @@ from show_forecasts.constants import (
 # Returns
 #    An xarray DataSet containing the cGAN rainfall forecasts.
 def load_GAN_forecast(
-    forecast_init_date: datetime | date,
+    model: str,
     data_dir: str,
+    init_date: datetime | date,
+    init_time: str | None = "00",
     mask_region: str | None = COUNTRY_NAMES[0],
     cgan_ui_fs: bool | None = False,
 ) -> xr.Dataset:
-    d = forecast_init_date  # Shorthand
     if cgan_ui_fs:
         mask_region = mask_region if mask_region is not None else COUNTRY_NAMES[0]
         file_path = (
             Path(data_dir)
             / mask_region
-            / str(d.year)
-            / str(d.month).rjust(2, "0")
-            / f"{mask_region.lower().replace(' ','_')}-cgan_forecast-{d.year}{d.month:02}{d.day:02}.nc"
+            / str(init_date.year)
+            / str(init_date.month).rjust(2, "0")
+            / f"{mask_region.lower().replace(' ','_')}-{model.replace('-','_')}-"
+            + f"{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}.nc"
         )
     else:
-        file_path = f"{data_dir}/GAN_{d.year}{d.month:02}{d.day:02}.nc"
+        file_path = f"{data_dir}/GAN_{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}.nc"
     data = xr.open_dataset(file_path)
     return data
 
@@ -842,7 +844,10 @@ def plot_location_marker(
         region_extent = get_region_extent(region, border_size=0.5)
 
         # Check that the point specified is within the region specified
-        if pt_in_rect([location["longitude"], location["latitude"]], region_extent) != True:
+        if (
+            pt_in_rect([location["longitude"], location["latitude"]], region_extent)
+            != True
+        ):
             print(f"ERROR: Longitude and latitude specified is not in {region}.")
             return
 

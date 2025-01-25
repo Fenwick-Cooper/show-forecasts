@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "show-forecasts"
-version = "0.1.9"
+version = "0.2.0"
 description = "cGAN forecasts post-processing and visualization scripts"
 authors = [
     "Fenwick <fenwick.cooper@physics.ox.ac.uk>",
