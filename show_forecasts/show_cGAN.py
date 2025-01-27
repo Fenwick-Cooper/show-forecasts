@@ -53,13 +53,16 @@ def load_GAN_forecast(
 ) -> xr.Dataset:
     if cgan_ui_fs:
         mask_region = mask_region if mask_region is not None else COUNTRY_NAMES[0]
+        fcst_filename = (
+            f"{mask_region.lower().replace(' ','_')}-{model.replace('-','_')}-"
+            + f"{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}.nc"
+        )
         file_path = (
             Path(data_dir)
             / mask_region
             / str(init_date.year)
             / str(init_date.month).rjust(2, "0")
-            / f"{mask_region.lower().replace(' ','_')}-{model.replace('-','_')}-"
-            + f"{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}.nc"
+            / fcst_filename
         )
     else:
         file_path = f"{data_dir}/GAN_{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}.nc"
