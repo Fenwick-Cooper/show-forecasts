@@ -65,7 +65,7 @@ def load_GAN_forecast(
             / fcst_filename
         )
     else:
-        file_path = f"{data_dir}/GAN_{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}.nc"
+        file_path = f"{data_dir}/GAN_{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}Z.nc"
     data = xr.open_dataset(file_path)
     return data
 
