@@ -55,7 +55,7 @@ def load_GAN_forecast(
         mask_region = mask_region if mask_region is not None else COUNTRY_NAMES[0]
         fcst_filename = (
             f"{mask_region.lower().replace(' ','_')}-{model.replace('-','_')}-"
-            + f"{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}.nc"
+            + f"{init_date.year}{init_date.month:02}{init_date.day:02}_{init_time}Z.nc"
         )
         file_path = (
             Path(data_dir)
