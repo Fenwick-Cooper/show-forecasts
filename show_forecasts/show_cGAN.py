@@ -51,6 +51,7 @@ def load_GAN_forecast(
     mask_region: str | None = COUNTRY_NAMES[0],
     cgan_ui_fs: bool | None = False,
 ) -> xr.Dataset:
+    init_time = "00" if init_time not in ["06", "12", "18"] else init_time
     if cgan_ui_fs:
         mask_region = mask_region if mask_region is not None else COUNTRY_NAMES[0]
         fcst_filename = (
