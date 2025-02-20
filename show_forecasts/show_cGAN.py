@@ -169,13 +169,12 @@ def plot_GAN_forecast(
                 ]
             else:
                 print(
-                    f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all'."
+                    f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all' for {model} model."
                 )
         else:
             print(
-                "ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens"
+                f"ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens. found invalid {model} model name"
             )
-            return
 
     elif accumulation_time == "24h":
 
@@ -183,6 +182,7 @@ def plot_GAN_forecast(
             print(
                 "ERROR: valid_time_start_hour must be 30h when accumulation_time is '24h'."
             )
+            valid_time_start_hour = "30h"
 
     else:
         print("ERROR: accumulation_time must be either '06h' or '24h'.")
@@ -322,7 +322,7 @@ def plot_GAN_forecast(
         ax.set_title("Ensemble standard deviation", size=14)  # This plot's title
 
         fig.suptitle(
-            f"Jurre Brishti cGAN forecast: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+            f"{model.replace('-', '  ').title()} cGAN forecast: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
         )  # Overall title
         plt.tight_layout()  # Looks nicer
 
@@ -407,10 +407,12 @@ def plot_GAN_ensemble(
             valid_time_idx = forecast_valid_times[model].index(valid_time_start_hour)
         else:
             print(
-                f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all'."
+                f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all' for {model} model."
             )
     else:
-        print("ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens")
+        print(
+            f"ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens. found invalid {model} model name"
+        )
 
     # Convert the forecast initialization time to a datetime.datetime format
     fcst_init_time = datetime64_to_datetime(data["time"][0].values)
@@ -492,7 +494,7 @@ def plot_GAN_ensemble(
     cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
 
     fig.suptitle(
-        f"Jurre Brishti cGAN ensemble: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+        f"{model.replace('-', '  ').title()} cGAN ensemble: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
 
     # Save the plot
@@ -582,10 +584,12 @@ def plot_GAN_threshold_chance(
             ]
         else:
             print(
-                f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all'."
+                f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all' for {model} model."
             )
     else:
-        print("ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens")
+        print(
+            f"ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens. found invalid {model} model name"
+        )
 
     if len(valid_time_idx_list) == 1:
 
@@ -681,7 +685,7 @@ def plot_GAN_threshold_chance(
                 ticks=GAN_THRESHOLD_PLOT_LEVELS, labels=GAN_THRESHOLD_PLOT_LEVEL_NAMES
             )
 
-    title_string = f"""Jurre Brishti cGAN ensemble: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')}
+    title_string = f"""{model.replace('-', '  ').title()} Threshold Chance: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')}
     Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}."""
 
     fig.suptitle(title_string)  # Overall title
