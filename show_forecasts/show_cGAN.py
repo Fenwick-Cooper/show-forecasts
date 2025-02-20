@@ -322,7 +322,7 @@ def plot_GAN_forecast(
         ax.set_title("Ensemble standard deviation", size=14)  # This plot's title
 
         fig.suptitle(
-            f"{model.replace('-', '  ').rename('ens','').title()} cGAN forecast: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+            f"{model.replace('-', '  ').replace('ens','').title()} cGAN forecast: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
         )  # Overall title
         plt.tight_layout()  # Looks nicer
 
@@ -494,7 +494,7 @@ def plot_GAN_ensemble(
     cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
 
     fig.suptitle(
-        f"{model.replace('-', '  ').rename('ens','').title()} cGAN ensemble: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+        f"{model.replace('-', '  ').replace('ens','').title()} cGAN ensemble: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
 
     # Save the plot
@@ -685,7 +685,7 @@ def plot_GAN_threshold_chance(
                 ticks=GAN_THRESHOLD_PLOT_LEVELS, labels=GAN_THRESHOLD_PLOT_LEVEL_NAMES
             )
 
-    title_string = f"""{model.replace('-', '  ').rename('ens','').title()} Threshold Chance: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')}
+    title_string = f"""{model.replace('-', '  ').replace('ens','').title()} Threshold Chance: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')}
     Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}."""
 
     fig.suptitle(title_string)  # Overall title
