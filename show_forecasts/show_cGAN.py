@@ -12,17 +12,15 @@ import cartopy.crs as ccrs
 from cartopy.feature import ShapelyFeature
 import matplotlib.pyplot as plt
 from matplotlib import colors  # For consistency with Harris et. al 2022
-from datetime import timedelta, datetime, date
+from datetime import datetime, date
 from pathlib import Path
 import xarray as xr
 from show_forecasts.data_utils import (
     get_region_extent,
     get_shape_boundary,
-    get_locations_data,
     get_plot_normalisation,
     get_contour_levels,
     datetime64_to_datetime,
-    pt_in_rect,
     get_threshold_plot_colours,
 )
 from show_forecasts.constants import (
@@ -100,10 +98,10 @@ def sort_along_ensemble_axis(data):
 # Plot the ensemble mean and ensemble standard deviation of the cGAN forecast data
 # at each valid time.
 # Arguments
-#   data                        - An xarray DataSet containing the cGAN rainfall forecasts.
+#   data                         - An xarray DataSet containing the cGAN rainfall forecasts.
+#   model                        - name of cGAN model. One of jurre-brishti-ens of mvua-kubwa-ens
 #   accumulation_time='06h'      - Can be '06h', or '24h'
-#   valid_time_start_hour='all' - The hour the valid time starts at. Can either be 6, 12, 18
-#                                 or 0 UTC, or specify 'all' to make all four plots.
+#   valid_time_start_hour='all' - The hour the valid time starts at.
 #   style=None                  - Options: 'ICPAC', 'ICPAC_heavy', 'KMD', 'EMI', 'EMI_heavy'
 #   plot_units='mm/h'           - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
 #   region='East Africa'              - can be 'East Africa', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi',
@@ -348,7 +346,8 @@ def plot_GAN_forecast(
 # Plot all ensemble members in the cGAN forecast data at a specified valid time.
 # Arguments
 #   data                  - An xarray DataSet containing the cGAN rainfall forecasts.
-#   valid_time_start_hour - The hour the valid time starts at. Can either be 6, 12, 18 or 0.
+#   model                        - name of cGAN model. One of jurre-brishti-ens of mvua-kubwa-ens
+#   valid_time_start_hour - The hour the valid time starts at.
 #   style=None            - Options: 'ICPAC', 'ICPAC_heavy', 'KMD', 'EMI', 'EMI_heavy'
 #   plot_units='mm/h'     - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
 #   region='East Africa'  - can be 'East Africa', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
@@ -514,6 +513,7 @@ def plot_GAN_ensemble(
 # Plot the chance of rainfall at a rate above a specified threshold.
 # Arguments
 #   data                    - An xarray DataSet containing the cGAN rainfall forecasts.
+#   model                        - name of cGAN model. One of jurre-brishti-ens of mvua-kubwa-ens
 #   threshold=2             - We'll plot the chance of rainfall above this threshold rate. The
 #                             default is 2 mm/h. The units of threshold is set by plot_units.
 #   plot_units='mm/h'       - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
