@@ -2,6 +2,8 @@
 *.pyc
 *.log
 .*
+*.png
+*.jpg
 __pycache__
 data
 store

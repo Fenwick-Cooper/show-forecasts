@@ -5,6 +5,7 @@
 #   Store and extract the model name from the data.
 #   Add the initialisation time to the title.
 from os import getenv
+from typing import Literal
 import numpy as np
 import cartopy.feature as cfeature
 import cartopy.crs as ccrs
@@ -35,11 +36,12 @@ from show_forecasts.constants import (
 # Load a 24 hour mean forecast at a lead time of 30 to 54 hours
 # To be clear about the dates use print_forecast_info(forecast_init_date)
 # Arguments
-#    forecast_init_date       - A datetime.datetime corresponding to when the forecast was initialised.
 #    data_dir                 - Directory where the data is stored.
 #    mask_region (optional)   - region to be used for plotting. defaults to East Africa
 #                              valid options are 'East Africa', 'Kenya', 'South Sudan', 'Rwanda', 'Burundi', 'Djibouti',
 #                              'Eritrea', 'Ethiopia', 'Sudan', 'Somalia', 'Tanzania', 'Uganda'
+#    init_date                - A datetime.datetime corresponding to when the forecast was initialised.
+#    init_time                - A two digits string to denote forecast initialization time. Valid values are 00, 06, 12 and 18
 # cgan_ui_fs (optional)       - instruction on whether to use new cgan ui filesystem structure. defaults to false
 # Returns
 #    An xarray DataSet containing the cGAN rainfall forecasts.
@@ -47,7 +49,7 @@ def load_GAN_forecast(
     model: str,
     data_dir: str,
     init_date: datetime | date,
-    init_time: str | None = "00",
+    init_time: Literal["00", "06", "12", "18"] | None = "00",
     mask_region: str | None = COUNTRY_NAMES[0],
     cgan_ui_fs: bool | None = False,
 ) -> xr.Dataset:
@@ -60,6 +62,7 @@ def load_GAN_forecast(
         )
         file_path = (
             Path(data_dir)
+            / model
             / mask_region
             / str(init_date.year)
             / str(init_date.month).rjust(2, "0")
@@ -98,7 +101,7 @@ def sort_along_ensemble_axis(data):
 # at each valid time.
 # Arguments
 #   data                        - An xarray DataSet containing the cGAN rainfall forecasts.
-#   accumulation_time='6h'      - Can be '6h', or '24h'
+#   accumulation_time='06h'      - Can be '06h', or '24h'
 #   valid_time_start_hour='all' - The hour the valid time starts at. Can either be 6, 12, 18
 #                                 or 0 UTC, or specify 'all' to make all four plots.
 #   style=None                  - Options: 'ICPAC', 'ICPAC_heavy', 'KMD', 'EMI', 'EMI_heavy'
@@ -111,7 +114,8 @@ def sort_along_ensemble_axis(data):
 #                                 file name.
 def plot_GAN_forecast(
     data: xr.Dataset,
-    accumulation_time: str | None = "6h",
+    model: Literal["jurre-brishti-ens", "mvua-kubwa-ens"] | None = "jurre-brishti-ens",
+    accumulation_time: str | None = "06h",
     valid_time_start_hour: str | None = "all",
     lon_dim: str | None = "longitude",
     lat_dim: str | None = "latitude",
@@ -148,48 +152,51 @@ def plot_GAN_forecast(
         # Get extents of the region we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
 
-    if accumulation_time == "6h":
+    forecast_valid_times = {
+        "jurre-brishti-ens": ["30h", "36h", "42h", "48h"],
+        "mvua-kubwa-ens": ["06h", "30h", "54h", "78h", "102h", "126h", "150h"],
+    }
+    # set default forecast valid start time
+    valid_time_idx_list = [0]
+
+    if accumulation_time == "06h":
 
         # Change valid_time_start_hour into the valid_time_idx
-        valid_time_start_hour = str(valid_time_start_hour)
-        if valid_time_start_hour == "6":
-            valid_time_idx_list = [0]
-        elif valid_time_start_hour == "12":
-            valid_time_idx_list = [1]
-        elif valid_time_start_hour == "18":
-            valid_time_idx_list = [2]
-        elif valid_time_start_hour == "0":
-            valid_time_idx_list = [3]
-        elif valid_time_start_hour == "all":
+        if valid_time_start_hour == "all":
             valid_time_idx_list = range(len(data["valid_time"]))
+        elif model in forecast_valid_times.keys():
+            if valid_time_start_hour in forecast_valid_times[model]:
+                valid_time_idx_list = [
+                    forecast_valid_times[model].index(valid_time_start_hour)
+                ]
+            else:
+                print(
+                    f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all'."
+                )
         else:
             print(
-                f"ERROR: valid_time_start_hour must be 6, 12, 18 or 0 hours {getenv('DEFAULT_TIMEZONE', 'UTC')} or 'all'."
+                "ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens"
             )
             return
-
-        valid_time_delta = timedelta(hours=6)
 
     elif accumulation_time == "24h":
 
-        if (valid_time_start_hour != "0") and (valid_time_start_hour != "all"):
+        if (valid_time_start_hour != "30h") and (valid_time_start_hour != "all"):
             print(
-                "ERROR: valid_time_start_hour must be 0 when accumulation_time is '24h'."
+                "ERROR: valid_time_start_hour must be 30h when accumulation_time is '24h'."
             )
-            return
-
-        valid_time_idx_list = [0]
-        valid_time_delta = timedelta(hours=24)
 
     else:
-        print("ERROR: accumulation_time must be either '6h' or '24h'.")
-        return
+        print("ERROR: accumulation_time must be either '06h' or '24h'.")
 
     # There are plots for each valid time
     for valid_time_idx in valid_time_idx_list:
 
+        # Convert the forecast initialization time to a datetime.datetime format
+        fcst_init_time = datetime64_to_datetime(data["time"][0].values)
+
         # Convert the forecast valid time to a datetime.datetime format
-        valid_time = datetime64_to_datetime(
+        fcst_valid_time = datetime64_to_datetime(
             data["fcst_valid_time"][0, valid_time_idx].values
         )
 
@@ -220,7 +227,7 @@ def plot_GAN_forecast(
             ax.add_feature(region_feature, linestyle=":")
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         # Either plot 6h data or 24h data
-        if accumulation_time == "6h":
+        if accumulation_time == "06h":
             data_to_plot = (
                 np.mean(data["precipitation"][0, :, valid_time_idx, :, :], axis=0)
                 * plot_norm
@@ -230,7 +237,7 @@ def plot_GAN_forecast(
                 np.mean(data["precipitation"][0, :, :, :, :], axis=(0, 1)) * plot_norm
             )
         # Actually make the plot
-        if style == None:
+        if style is None:
             c = ax.pcolormesh(
                 data[lon_dim],
                 data[lat_dim],
@@ -254,7 +261,7 @@ def plot_GAN_forecast(
             cb_labels[-1] = ""  # Remove the final label
             cb.set_ticks(ticks=plot_levels * plot_norm, labels=cb_labels)
         cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
-        ax.set_title(f"Ensemble mean", size=14)  # This plot's title
+        ax.set_title("Ensemble mean", size=14)  # This plot's title
 
         ax = axs[1]  # Second plot (right)
         ax.add_feature(
@@ -272,7 +279,7 @@ def plot_GAN_forecast(
             ax.add_feature(region_feature, linestyle=":")
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         # Either plot 6h data or 24h data
-        if accumulation_time == "6h":
+        if accumulation_time == "06h":
             data_to_plot = (
                 np.std(
                     data["precipitation"][0, :, valid_time_idx, :, :], axis=0, ddof=1
@@ -290,7 +297,7 @@ def plot_GAN_forecast(
                 * plot_norm
             )
         # Actually make the plot
-        if style == None:
+        if style is None:
             c = ax.pcolormesh(
                 data[lon_dim],
                 data[lat_dim],
@@ -314,22 +321,20 @@ def plot_GAN_forecast(
             cb_labels[-1] = ""  # Remove the final label
             cb.set_ticks(ticks=plot_levels * plot_norm, labels=cb_labels)
         cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
-        ax.set_title(f"Ensemble standard deviation", size=14)  # This plot's title
+        ax.set_title("Ensemble standard deviation", size=14)  # This plot's title
 
         fig.suptitle(
-            f"Jurre Brishti cGAN forecast: Valid {valid_time.strftime('%Y-%m-%d %H:00')} to {(valid_time + valid_time_delta).strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+            f"Jurre Brishti cGAN forecast: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
         )  # Overall title
         plt.tight_layout()  # Looks nicer
 
         # Save the plot
-        if file_name != None:
+        if file_name is not None:
             if file_name[-4:] in [".png", ".jpg", ".pdf"]:
                 # If we are making more than one plot
                 if valid_time_start_hour == "all":
                     # Append the hour to the file name
-                    save_file_name = (
-                        f"{file_name[:-4]}_{valid_time.hour:02d}{file_name[-4:]}"
-                    )
+                    save_file_name = f"{file_name[:-4]}_{fcst_init_time.hour:02d}_{fcst_valid_time.hour:02d}{file_name[-4:]}"
                 else:  # We are making only one plot
                     save_file_name = file_name  # Use the exact file name specified
                 plt.savefig(save_file_name, format=file_name[-3:], bbox_inches="tight")
@@ -353,7 +358,8 @@ def plot_GAN_forecast(
 #                            plot is saved in that format.
 def plot_GAN_ensemble(
     data: xr.Dataset,
-    valid_time_start_hour: str | None = "6",
+    model: Literal["jurre-brishti-ens", "mvua-kubwa-ens"] | None = "jurre-brishti-ens",
+    valid_time_start_hour: str | None = "30",
     lon_dim: str | None = "longitude",
     lat_dim: str | None = "latitude",
     style: str | None = COLOR_SCHEMES[0],
@@ -389,21 +395,29 @@ def plot_GAN_ensemble(
         region_extent = get_region_extent(region, border_size=0.5)
 
     # Change valid_time_start_hour into the valid_time_idx
-    valid_time_start_hour = str(valid_time_start_hour)
-    if valid_time_start_hour == "6":
-        valid_time_idx = 0
-    elif valid_time_start_hour == "12":
-        valid_time_idx = 1
-    elif valid_time_start_hour == "18":
-        valid_time_idx = 2
-    elif valid_time_start_hour == "0":
-        valid_time_idx = 3
+    forecast_valid_times = {
+        "jurre-brishti-ens": ["30h", "36h", "42h", "48h"],
+        "mvua-kubwa-ens": ["06h", "30h", "54h", "78h", "102h", "126h", "150h"],
+    }
+    # set default forecast valid start time
+    valid_time_idx = 0
+
+    # Change valid_time_start_hour into the valid_time_idx
+    if model in forecast_valid_times.keys():
+        if valid_time_start_hour in forecast_valid_times[model]:
+            valid_time_idx = forecast_valid_times[model].index(valid_time_start_hour)
+        else:
+            print(
+                f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all'."
+            )
     else:
-        print("ERROR: valid_time_start_hour must be 6, 12, 18 or 0 hours UTC.")
-        return
+        print("ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens")
+
+    # Convert the forecast initialization time to a datetime.datetime format
+    fcst_init_time = datetime64_to_datetime(data["time"][0].values)
 
     # Convert the forecast valid time to a datetime.datetime format
-    valid_time = datetime64_to_datetime(
+    fcst_valid_time = datetime64_to_datetime(
         data["fcst_valid_time"][0, valid_time_idx].values
     )
 
@@ -450,7 +464,7 @@ def plot_GAN_ensemble(
             ax.add_feature(region_feature, linestyle=":")
             ax.set_extent(region_extent, crs=ccrs.PlateCarree())
         # Actually make the plot
-        if style == None:
+        if style is None:
             c = ax.pcolormesh(
                 data[lon_dim],
                 data[lat_dim],
@@ -472,20 +486,24 @@ def plot_GAN_ensemble(
 
     # Add a final colorbar with a nice size
     cb = fig.colorbar(c, ax=axs, location="bottom", shrink=0.6, pad=0.01)
-    if style != None:
+    if style is not None:
         cb_labels = np.round(plot_levels * plot_norm, 1).astype(str).tolist()
         cb_labels[-1] = ""  # Remove the final label
         cb.set_ticks(ticks=plot_levels * plot_norm, labels=cb_labels)
     cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
 
     fig.suptitle(
-        f"Jurre Brishti cGAN ensemble: Valid {valid_time.strftime('%Y-%m-%d %H:00')} to {(valid_time + timedelta(hours=6)).strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+        f"Jurre Brishti cGAN ensemble: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
     )  # Overall title
 
     # Save the plot
-    if file_name != None:
+    if file_name is not None:
         if file_name[-4:] in [".png", ".jpg", ".pdf"]:
-            plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
+            plt.savefig(
+                f"{file_name[:-4]}_{fcst_init_time.hour:02d}{file_name[-4:]}",
+                format=file_name[-3:],
+                bbox_inches="tight",
+            )
         else:
             print("ERROR: File type must be specified by '.png', '.jpg' or '.pdf'")
 
@@ -499,7 +517,7 @@ def plot_GAN_ensemble(
 #   threshold=2             - We'll plot the chance of rainfall above this threshold rate. The
 #                             default is 2 mm/h. The units of threshold is set by plot_units.
 #   plot_units='mm/h'       - Can be 'mm/h' (default), 'mm/6h', 'mm/day' or 'mm/week'
-#   valid_time_start_hour=6 - The hour the valid time starts at. Can either be 6, 12, 18 or 0 UTC,
+#   valid_time_start_hour=30 - The hour the valid time starts at. Can either be 6, 12, 18 or 0 UTC,
 #                             or specify 'all' to make all four plots.
 #   style=None              - Options: 'ICPAC', 'KMD', 'EMI'
 #   show_percentages=False  - Either shows a description (False) or the percentage (True) of
@@ -510,10 +528,11 @@ def plot_GAN_ensemble(
 #                             plot is saved in that format.
 def plot_GAN_threshold_chance(
     data: xr.Dataset,
+    model: Literal["jurre-brishti-ens", "mvua-kubwa-ens"] | None = "jurre-brishti-ens",
+    valid_time_start_hour: str | None = "all",
     style: str | None = "ICPAC",
     threshold: str | None = 2,
     plot_units: str | None = "mm/h",
-    valid_time_start_hour: int | None = 6,
     show_percentages: bool | None = False,
     region: str | None = COUNTRY_NAMES[0],
     file_name: str | None = None,
@@ -546,23 +565,27 @@ def plot_GAN_threshold_chance(
         # Get the extent of the region that we are looking at
         region_extent = get_region_extent(region, border_size=0.5)
 
+    forecast_valid_times = {
+        "jurre-brishti-ens": ["30h", "36h", "42h", "48h"],
+        "mvua-kubwa-ens": ["06h", "30h", "54h", "78h", "102h", "126h", "150h"],
+    }
+    # set default forecast valid start time
+    valid_time_idx_list = [0]
+
     # Change valid_time_start_hour into the valid_time_idx
-    valid_time_start_hour = str(valid_time_start_hour)
-    if valid_time_start_hour == "6":
-        valid_time_idx_list = [0]
-    elif valid_time_start_hour == "12":
-        valid_time_idx_list = [1]
-    elif valid_time_start_hour == "18":
-        valid_time_idx_list = [2]
-    elif valid_time_start_hour == "0":
-        valid_time_idx_list = [3]
-    elif valid_time_start_hour == "all":
-        valid_time_idx_list = np.arange(len(data["valid_time"]))
+    if valid_time_start_hour == "all":
+        valid_time_idx_list = range(len(data["valid_time"]))
+    elif model in forecast_valid_times.keys():
+        if valid_time_start_hour in forecast_valid_times[model]:
+            valid_time_idx_list = [
+                forecast_valid_times[model].index(valid_time_start_hour)
+            ]
+        else:
+            print(
+                f"ERROR: valid_time_start_hour must be one of {', '.join(forecast_valid_times[model])} or 'all'."
+            )
     else:
-        print(
-            f"ERROR: valid_time_start_hour must be 6, 12, 18 or 0 hours {getenv('DEFAULT_TIMEZONE', 'UTC')} or 'all'."
-        )
-        return
+        print("ERROR: model name must be one of jurre-brishti-ens or mvua-kubwa-ens")
 
     if len(valid_time_idx_list) == 1:
 
@@ -577,14 +600,14 @@ def plot_GAN_threshold_chance(
         # axs is a `GeoAxes`. Make it into a 1-D array
         axs = [axs]
 
-    if len(valid_time_idx_list) == 4:
-
+    else:
+        figsize = (8, 8) if len(valid_time_idx_list) == 4 else (12, 18)
         # Define the figure and axes
         fig, axs = plt.subplots(
-            nrows=2,
+            nrows=int(np.ceil(len(valid_time_idx_list) / 2)),
             ncols=2,
             subplot_kw={"projection": ccrs.PlateCarree()},
-            figsize=(8, 8),
+            figsize=figsize,
         )
 
         # axs is a 2 dimensional array of `GeoAxes`. Flatten it into a 1-D array
@@ -596,17 +619,21 @@ def plot_GAN_threshold_chance(
     # Define the plot colours
     plot_colours = get_threshold_plot_colours(style)
 
+    # Convert the forecast valid time to a datetime.datetime format
+    fcst_init_time = datetime64_to_datetime(data["time"][0].values)
+
     # There are plots for each valid time
     for idx, valid_time_idx in enumerate(valid_time_idx_list):
 
         # Convert the forecast valid time to a datetime.datetime format
-        valid_time = datetime64_to_datetime(
+        fcst_valid_time = datetime64_to_datetime(
             data["fcst_valid_time"][0, valid_time_idx].values
         )
 
         # Keep the first valid time for the plot title
-        if idx == 0:
-            first_valid_time = valid_time
+        # TODO: remove this line
+        # if idx == 0:
+        #     first_valid_time = fcst_valid_time
 
         # The percentage of ensemble members that exceed the threshold
         plot_data = (
@@ -641,7 +668,7 @@ def plot_GAN_threshold_chance(
             colors=plot_colours,
         )
         ax.set_title(
-            f"Valid {valid_time.strftime('%H:00')} - {(valid_time + timedelta(hours=6)).strftime('%H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}",
+            f"{fcst_init_time.strftime('%Y-%m-%d %H:00')} - {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}",
             size=14,
         )
         cb = plt.colorbar(c, fraction=0.04)
@@ -654,14 +681,14 @@ def plot_GAN_threshold_chance(
                 ticks=GAN_THRESHOLD_PLOT_LEVELS, labels=GAN_THRESHOLD_PLOT_LEVEL_NAMES
             )
 
-    title_string = f"""Jurre Brishti cGAN ensemble: Valid {first_valid_time.date()} to {(valid_time + timedelta(hours=6)).date()}
+    title_string = f"""Jurre Brishti cGAN ensemble: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')}
     Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}."""
 
     fig.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
 
     # Save the plot
-    if file_name != None:
+    if file_name is not None:
         if file_name[-4:] in [".png", ".jpg", ".pdf"]:
             plt.savefig(file_name, format=file_name[-3:], bbox_inches="tight")
         else:
@@ -950,7 +977,7 @@ def plot_GAN_local_histograms(
             print(f"ERROR: Location '{location_name}' is not in the list of locations.")
             return
 
-    else:  # latitude and longitude are specified
+    else:  # latitude and longitude are speallcified
         location = {
             "name": location_name,
             "country": COUNTRY_NAMES[0],
