@@ -501,7 +501,7 @@ def plot_GAN_ensemble(
     if file_name is not None:
         if file_name[-4:] in [".png", ".jpg", ".pdf"]:
             plt.savefig(
-                f"{file_name[:-4]}",
+                file_name,
                 format=file_name[-3:],
                 bbox_inches="tight",
             )
