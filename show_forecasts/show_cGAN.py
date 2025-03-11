@@ -4,7 +4,6 @@
 #   Change "mm h**-1" to "mm/h" in the data.
 #   Store and extract the model name from the data.
 #   Add the initialisation time to the title.
-from os import getenv
 from typing import Literal
 import numpy as np
 import cartopy.feature as cfeature
@@ -12,7 +11,7 @@ import cartopy.crs as ccrs
 from cartopy.feature import ShapelyFeature
 import matplotlib.pyplot as plt
 from matplotlib import colors  # For consistency with Harris et. al 2022
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 import xarray as xr
 from show_forecasts.data_utils import (
@@ -154,6 +153,7 @@ def plot_GAN_forecast(
         "jurre-brishti-ens": ["30h", "36h", "42h", "48h"],
         "mvua-kubwa-ens": ["06h", "30h", "54h", "78h", "102h", "126h", "150h"],
     }
+    time_incrementor = 6 if model == "jurre-brishti-ens" else 24
     # set default forecast valid start time
     valid_time_idx_list = [0]
 
@@ -194,9 +194,12 @@ def plot_GAN_forecast(
         fcst_init_time = datetime64_to_datetime(data["time"][0].values)
 
         # Convert the forecast valid time to a datetime.datetime format
-        fcst_valid_time = datetime64_to_datetime(
+        fcst_start_time = datetime64_to_datetime(
             data["fcst_valid_time"][0, valid_time_idx].values
         )
+        fcst_final_time = datetime64_to_datetime(
+            data["fcst_valid_time"][0, valid_time_idx].values
+        ) + timedelta(hours=time_incrementor)
 
         # Define the figure and each axis for the rows and columns
         fig, axs = plt.subplots(
@@ -322,7 +325,8 @@ def plot_GAN_forecast(
         ax.set_title("Ensemble standard deviation", size=14)  # This plot's title
 
         fig.suptitle(
-            f"{model.replace('-', '  ').replace('ens','').title()} cGAN forecast: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+            f"{model.replace('-', '  ').replace('ens','').title()} cGAN forecast \n Initialized {fcst_init_time.strftime('%Y-%m-%d %H:00')} UTC \n "+
+            f"Valid from {fcst_start_time.strftime('%Y-%m-%d %H:00')} UTC to {fcst_final_time.strftime('%Y-%m-%d %H:00')} UTC"
         )  # Overall title
         plt.tight_layout()  # Looks nicer
 
@@ -332,7 +336,7 @@ def plot_GAN_forecast(
                 # If we are making more than one plot
                 if valid_time_start_hour == "all":
                     # Append the hour to the file name
-                    save_file_name = f"{file_name[:-4]}_{fcst_init_time.hour:02d}_{fcst_valid_time.hour:02d}{file_name[-4:]}"
+                    save_file_name = f"{file_name[:-4]}_{fcst_init_time.hour:02d}_{fcst_start_time.hour:02d}{file_name[-4:]}"
                 else:  # We are making only one plot
                     save_file_name = file_name  # Use the exact file name specified
                 plt.savefig(save_file_name, format=file_name[-3:], bbox_inches="tight")
@@ -398,6 +402,7 @@ def plot_GAN_ensemble(
         "jurre-brishti-ens": ["30h", "36h", "42h", "48h"],
         "mvua-kubwa-ens": ["06h", "30h", "54h", "78h", "102h", "126h", "150h"],
     }
+    time_incrementor = 6 if model == "jurre-brishti-ens" else 24
     # set default forecast valid start time
     valid_time_idx = 0
 
@@ -418,9 +423,12 @@ def plot_GAN_ensemble(
     fcst_init_time = datetime64_to_datetime(data["time"][0].values)
 
     # Convert the forecast valid time to a datetime.datetime format
-    fcst_valid_time = datetime64_to_datetime(
+    fcst_start_time = datetime64_to_datetime(
         data["fcst_valid_time"][0, valid_time_idx].values
     )
+    fcst_final_time = datetime64_to_datetime(
+        data["fcst_valid_time"][0, valid_time_idx].values
+    ) + timedelta(hours=time_incrementor)
 
     # How many plots will we make
     num_plots = np.min([max_num_plots, data["member"].size])
@@ -494,7 +502,8 @@ def plot_GAN_ensemble(
     cb.set_label(f"Rainfall ({plot_units})")  # Label the colorbar
 
     fig.suptitle(
-        f"{model.replace('-', '  ').replace('ens','').title()} cGAN ensemble: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}"
+        f"{model.replace('-', '  ').replace('ens','').title()} cGAN ensemble \n Initialized {fcst_init_time.strftime('%Y-%m-%d %H:00')} UTC \n "+
+        f"to {fcst_start_time.strftime('%Y-%m-%d %H:00')} UTC to {fcst_final_time.strftime('%Y-%m-%d %H:00')} UTC"
     )  # Overall title
 
     # Save the plot
@@ -571,6 +580,7 @@ def plot_GAN_threshold_chance(
         "jurre-brishti-ens": ["30h", "36h", "42h", "48h"],
         "mvua-kubwa-ens": ["06h", "30h", "54h", "78h", "102h", "126h", "150h"],
     }
+    time_incrementor = 6 if model == "jurre-brishti-ens" else 24
     # set default forecast valid start time
     valid_time_idx_list = [0]
 
@@ -605,7 +615,7 @@ def plot_GAN_threshold_chance(
         axs = [axs]
 
     else:
-        figsize = (8, 8) if len(valid_time_idx_list) == 4 else (12, 18)
+        figsize = (10, 9) if len(valid_time_idx_list) == 4 else (12, 18)
         # Define the figure and axes
         fig, axs = plt.subplots(
             nrows=int(np.ceil(len(valid_time_idx_list) / 2)),
@@ -630,9 +640,12 @@ def plot_GAN_threshold_chance(
     for idx, valid_time_idx in enumerate(valid_time_idx_list):
 
         # Convert the forecast valid time to a datetime.datetime format
-        fcst_valid_time = datetime64_to_datetime(
+        fcst_start_time = datetime64_to_datetime(
             data["fcst_valid_time"][0, valid_time_idx].values
         )
+        fcst_final_time = datetime64_to_datetime(
+            data["fcst_valid_time"][0, valid_time_idx].values
+        ) + timedelta(hours=time_incrementor)
 
         # Keep the first valid time for the plot title
         # TODO: remove this line
@@ -672,8 +685,8 @@ def plot_GAN_threshold_chance(
             colors=plot_colours,
         )
         ax.set_title(
-            f"{fcst_init_time.strftime('%Y-%m-%d %H:00')} - {fcst_valid_time.strftime('%Y-%m-%d %H:00')} {getenv('DEFAULT_TIMEZONE', 'UTC')}",
-            size=14,
+            f"Valid {fcst_start_time.strftime('%Y-%m-%d %H:00')} UTC to {fcst_final_time.strftime('%Y-%m-%d %H:00')} UTC",
+            size=10,
         )
         cb = plt.colorbar(c, fraction=0.04)
         # cb.ax.tick_params(labelsize=18)
@@ -685,8 +698,14 @@ def plot_GAN_threshold_chance(
                 ticks=GAN_THRESHOLD_PLOT_LEVELS, labels=GAN_THRESHOLD_PLOT_LEVEL_NAMES
             )
 
-    title_string = f"""{model.replace('-', '  ').replace('ens','').title()} Threshold Chance: Valid {fcst_init_time.strftime('%Y-%m-%d %H:00')} to {fcst_valid_time.strftime('%Y-%m-%d %H:00')}
-    Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}."""
+    title_string = (
+        f"{model.replace('-', '  ').replace('ens','').title()} Threshold Chance: \n"+
+        f"Initialized {fcst_init_time.strftime('%Y-%m-%d %H:00')} UTC \n"+
+        f"Chance of rainfall above {threshold*plot_norm:.1f} {plot_units}."
+    )
+
+    if len(valid_time_idx_list) > 4:
+        title_string += "\n"
 
     fig.suptitle(title_string)  # Overall title
     plt.tight_layout()  # Looks nicer
