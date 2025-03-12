@@ -16,7 +16,6 @@ from matplotlib import colors  # For consistency with Harris et. al 2022
 from datetime import datetime, timedelta, date
 from os import getenv
 from pathlib import Path
-import cfgrib
 import xarray as xr
 from show_forecasts.constants import (
     DATA_PARAMS,
@@ -142,59 +141,65 @@ def load_ifs_forecast_from_grib2(
 
     else:  # Variables are not accumulated
         forecast_hours = np.arange(LEAD_START_HOUR, LEAD_END_HOUR + 1, 3)
+    try:
+        import cfgrib
+    except Exception:
+        return None
+    else:
 
-    # Just need the start and end lead times for accumulated variables
-    for lead_hour in forecast_hours:
-        if status_updates:
-            print(f"Loading {key} with lead time {lead_hour}h.")
+        # Just need the start and end lead times for accumulated variables
+        for lead_hour in forecast_hours:
+            if status_updates:
+                print(f"Loading {key} with lead time {lead_hour}h.")
 
-        # Name of the file we will read
-        file_name = f"{data_dir}/{d.year}{d.month:02}{d.day:02}000000-{lead_hour}h-enfo-ef.grib2"
+            # Name of the file we will read
+            file_name = f"{data_dir}/{d.year}{d.month:02}{d.day:02}000000-{lead_hour}h-enfo-ef.grib2"
 
-        # Open a grib2 file for reading
-        # xarray.open_dataset(file_name, engine="cfgrib") doesn't work!
-        ds = cfgrib.open_datasets(file_name)
+            # Open a grib2 file for reading
+            # xarray.open_dataset(file_name, engine="cfgrib") doesn't work!
+            ds = cfgrib.open_datasets(file_name)
 
-        # Get the DataArray corresponding to the key. 'number' ensures that we pick the ensemble forecast.
-        da = DataArray_from_Dataset_list(ds, key, dimensions="number")
-
-        # Get the DataArray corresponding to the key. 'number' ensures that we pick the ensemble forecast.
-        if key == "wind":
-            da_u10 = DataArray_from_Dataset_list(ds, "u10", dimensions="number")
-            da_v10 = DataArray_from_Dataset_list(ds, "v10", dimensions="number")
-            # We want the average wind speed, not the average air velocity.
-            data_3h = np.sqrt(
-                da_u10[:, 261:416, 796:938] ** 2 + da_v10[:, 261:416, 796:938] ** 2
-            )
-        else:
+            # Get the DataArray corresponding to the key. 'number' ensures that we pick the ensemble forecast.
             da = DataArray_from_Dataset_list(ds, key, dimensions="number")
-            data_3h = da[:, 261:416, 796:938]
 
-        # Average over the forecast period
-        if lead_hour == LEAD_START_HOUR:
-            data = data_3h / 2  # Divide by two for the trapezium rule
-            if DATA_PARAMS[key]["accumulated"]:
-                data = -data  # Negative because we are taking it away
-            data_norm = 0.5
+            # Get the DataArray corresponding to the key. 'number' ensures that we pick the ensemble forecast.
+            if key == "wind":
+                da_u10 = DataArray_from_Dataset_list(ds, "u10", dimensions="number")
+                da_v10 = DataArray_from_Dataset_list(ds, "v10", dimensions="number")
+                # We want the average wind speed, not the average air velocity.
+                data_3h = np.sqrt(
+                    da_u10[:, 261:416, 796:938] ** 2 + da_v10[:, 261:416, 796:938] ** 2
+                )
+            else:
+                da = DataArray_from_Dataset_list(ds, key, dimensions="number")
+                data_3h = da[:, 261:416, 796:938]
 
-        elif lead_hour == LEAD_END_HOUR:
-            data += data_3h / 2  # Divide by two for the trapezium rule
-            data_norm += 0.5
+            # Average over the forecast period
+            if lead_hour == LEAD_START_HOUR:
+                data = data_3h / 2  # Divide by two for the trapezium rule
+                if DATA_PARAMS[key]["accumulated"]:
+                    data = -data  # Negative because we are taking it away
+                data_norm = 0.5
 
-        else:
-            data += data_3h
-            data_norm += 1
+            elif lead_hour == LEAD_END_HOUR:
+                data += data_3h / 2  # Divide by two for the trapezium rule
+                data_norm += 0.5
 
-    # Normalise the data to get the 24 hour mean with the correct units
-    data = DATA_PARAMS[key]["offset"] + data / (
-        data_norm * DATA_PARAMS[key]["normalisation"]
-    )
+            else:
+                data += data_3h
+                data_norm += 1
 
-    # Record the name and units
-    data.attrs["name"] = DATA_PARAMS[key]["name"]
-    data.attrs["units"] = DATA_PARAMS[key]["units"]
+        # Normalise the data to get the 24 hour mean with the correct units
+        data = DATA_PARAMS[key]["offset"] + data / (
+            data_norm * DATA_PARAMS[key]["normalisation"]
+        )
 
-    return data
+        # Record the name and units
+        data.attrs["name"] = DATA_PARAMS[key]["name"]
+        data.attrs["units"] = DATA_PARAMS[key]["units"]
+
+        return data
+
 
 
 # Load a 24 hour mean forecast at a lead time of 30 to 54 hours from masked NetCDF files
