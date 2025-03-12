@@ -503,7 +503,7 @@ def plot_GAN_ensemble(
 
     fig.suptitle(
         f"{model.replace('-', '  ').replace('ens','').title()} cGAN ensemble \n Initialized {fcst_init_time.strftime('%Y-%m-%d %H:00')} UTC \n "+
-        f"to {fcst_start_time.strftime('%Y-%m-%d %H:00')} UTC to {fcst_final_time.strftime('%Y-%m-%d %H:00')} UTC"
+        f"Valid from {fcst_start_time.strftime('%Y-%m-%d %H:00')} UTC to {fcst_final_time.strftime('%Y-%m-%d %H:00')} UTC"
     )  # Overall title
 
     # Save the plot
@@ -685,7 +685,7 @@ def plot_GAN_threshold_chance(
             colors=plot_colours,
         )
         ax.set_title(
-            f"Valid {fcst_start_time.strftime('%Y-%m-%d %H:00')} UTC to {fcst_final_time.strftime('%Y-%m-%d %H:00')} UTC",
+            f"Valid from {fcst_start_time.strftime('%Y-%m-%d %H:00')} UTC to {fcst_final_time.strftime('%Y-%m-%d %H:00')} UTC",
             size=10,
         )
         cb = plt.colorbar(c, fraction=0.04)
